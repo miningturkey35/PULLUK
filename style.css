@@ -866,7 +866,7 @@ html[data-theme="dark"] footer {
 }
 @media (max-width: 900px) {
   .hero-inner { grid-template-columns: 1fr; }
-  .hero-visual { order: -1; max-width: 460px; margin-inline: auto; }
+  .hero-visual { max-width: 460px; margin-inline: auto; }
   .hero-visual-inner { animation: none; }
   .about-inner { grid-template-columns: 1fr; }
 }
