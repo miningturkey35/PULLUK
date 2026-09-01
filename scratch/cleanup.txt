@@ -1,0 +1,1 @@
+Delete: scratch/fix_hero.py, scratch/fix_hero.js, app_hero.js

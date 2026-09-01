@@ -1,0 +1,2 @@
+Hero stamp image loading code removed from app.js.
+Replaced dynamic image loading with static emoji-based stamp grid.
