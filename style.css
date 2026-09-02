@@ -296,6 +296,19 @@ html[data-theme="dark"] .hero-badge {
 }
 .visual-label::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--azure); flex: none; }
 
+.preview-carousel-container { position: relative; width: 100%; margin-top: 8px; }
+.preview-images-list { display: none; }
+.preview-carousel {
+  width: 100%; aspect-ratio: 4/3; border-radius: var(--radius-md);
+  overflow: hidden; background: var(--bg-alt, #f0f2f5);
+  display: flex; align-items: center; justify-content: center;
+}
+.preview-image {
+  width: 100%; height: 100%; object-fit: cover;
+  transition: opacity .5s ease-in-out;
+  border-radius: var(--radius-md);
+}
+
 .stamp-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .stamp-item {
   aspect-ratio: 3/4; border-radius: var(--radius-sm);
@@ -458,9 +471,9 @@ html[data-theme="dark"] .pdf-card:hover {
   flex: none;
 }
 .pdf-icon-frame {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
+  width: 68px;
+  height: 68px;
+  border-radius: 10px;
   border: 1.5px solid var(--line);
   display: flex;
   align-items: center;
@@ -724,9 +737,7 @@ html[data-theme="dark"] .collector-card {
 }
 .collector-avatar {
   width: 80px; height: 80px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--azure), var(--coral));
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; color: #fff;
+  object-fit: cover;
   margin-bottom: 20px; box-shadow: 0 0 0 4px rgba(61,99,255,.3);
 }
 .collector-name { font-family: var(--font-display); font-weight: 800; font-size: 1.4rem; color: var(--ink); margin-bottom: 4px; }
@@ -905,7 +916,118 @@ html[data-theme="dark"] footer {
   .pdf-open-btn { width: 30px; height: 30px; }
 }
 
-/* ---------- PDF Card Color Variations ---------- */
+/* ─── Plak (Vinyl) Card ─── */
+.plak-card {
+  border-left: 3px solid var(--gold);
+  min-width: 520px;
+}
+.plak-card:hover {
+  border-color: var(--gold);
+}
+html[data-theme="dark"] .plak-card {
+  border-left-color: var(--gold);
+}
+html[data-theme="dark"] .plak-card:hover {
+  border-color: var(--gold);
+}
+
+.plak-icon-frame {
+  width: 160px !important;
+  height: 160px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, var(--gold-light), var(--coral-light)) !important;
+}
+
+.plak-card-info {
+  grid-template-columns: 1fr 1fr !important;
+  gap: 4px 14px !important;
+}
+
+/* Album title and Koleksiyon No side by side */
+.plak-field-title,
+.plak-field-collection {
+  grid-column: span 1;
+}
+.plak-field-title .pdf-card-field__value {
+  font-family: var(--font-display);
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.25;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+}
+html[data-theme="dark"] .plak-field-title .pdf-card-field__value {
+  color: var(--ink);
+}
+.plak-card:hover .plak-field-title .pdf-card-field__value {
+  color: var(--gold);
+}
+
+/* Koleksiyon No styling */
+.plak-field-collection .pdf-card-field__value {
+  font-family: var(--font-display);
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--azure);
+  background: var(--azure-light);
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  white-space: nowrap !important;
+}
+html[data-theme="dark"] .plak-field-collection .pdf-card-field__value {
+  color: var(--gold);
+  background: var(--gold-light);
+}
+
+/* Allow text wrapping for plak card values */
+.plak-card .pdf-card-field__value {
+  font-family: var(--font-display);
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  line-height: 1.3;
+}
+
+/* Exception for format badge which should stay mono */
+.plak-field-format .pdf-card-field__value {
+  font-family: var(--font-mono);
+  font-size: .6rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: var(--gold-light);
+  color: var(--gold);
+  padding: 1px 6px;
+  border-radius: 3px;
+  display: inline-block;
+  width: auto;
+  white-space: nowrap !important;
+}
+html[data-theme="dark"] .plak-field-format .pdf-card-field__value {
+  background: var(--gold-light);
+  color: var(--gold);
+}
+
+/* Artist label highlight */
+.plak-field-artist .pdf-card-field__label {
+  color: var(--gold);
+}
+html[data-theme="dark"] .plak-field-artist .pdf-card-field__label {
+  color: var(--gold);
+}
+
+@media (max-width: 560px) {
+  .plak-card { min-width: 0; }
+  .plak-icon-frame { width: 100px !important; height: 100px !important; }
+  .plak-card-info { grid-template-columns: 1fr !important; }
+  .plak-field-title { grid-column: 1; }
+  .plak-field-collection { grid-column: 1; }
+}
+
+/* ─── PDF Card Color Variations ─── */
 .pdf-bg-1 { background: linear-gradient(135deg, #EEF2FF, #E0E7FF); }
 .pdf-bg-2 { background: linear-gradient(135deg, #FEF3C7, #FDE68A); }
 .pdf-bg-3 { background: linear-gradient(135deg, #FFF7ED, #FED7AA); }

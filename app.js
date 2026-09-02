@@ -195,7 +195,8 @@ function generateMockFiles(type) {
     ? ['Türkiye', 'Avrupa', 'Asya', 'Amerika', 'Afrika', 'Nadir', 'Tematik']
     : type === 'diecast' ? ['Klasik', 'Spor', 'Off-Road', 'Kamyon']
       : type === 'allother' ? ['Antika', 'Madeni Para', 'Kartpostal', 'Kitap', 'Çeşitli']
-        : ['33lük', '45lik', 'Yerli', 'Yabancı', 'Jazz', 'Rock'];
+        : type === 'plak' ? ['Rock', 'Pop', 'Jazz', 'Blues', 'Klasik', 'Türkçe', 'Elektronik', 'Hip Hop', 'Folk', 'Metal']
+          : ['33lük', '45lik', 'Yerli', 'Yabancı', 'Jazz', 'Rock'];
 
   const themes = ['Doğa', 'Mimari', 'Spor', 'Sanat', 'Ulaşım', 'Tarih', 'Flora', 'Fauna'];
   const diecastModels = [
@@ -206,6 +207,26 @@ function generateMockFiles(type) {
     'Volvo 240', 'Saab 900', 'Peugeot 205', 'Renault 5', 'Citroen DS',
     'Alfa Romeo Spider', 'Fiat 500', 'Lancia Delta', 'Audi Quattro', 'BMW M3'
   ];
+  const plakArtists = [
+    'Barış Manço', 'Cem Karaca', 'Erkin Koray', 'Moğollar', '3 Hürel', 'Selda Bağcan',
+    'Fikret Kızılok', 'Bülent Ortaçgil', 'Sezen Aksu', 'Ajda Pekkan', 'MFÖ',
+    'Pink Floyd', 'Led Zeppelin', 'The Beatles', 'Queen', 'David Bowie',
+    'Miles Davis', 'John Coltrane', 'Bill Evans', 'Keith Jarrett',
+    'Deep Purple', 'Black Sabbath', 'AC/DC', 'Metallica', 'Iron Maiden'
+  ];
+  const plakAlbums = [
+    '2023', 'Yeni Bir Gün', 'Koleksiyon', 'En İyileri', 'Live', 'Best Of',
+    'Greatest Hits', 'Anthology', 'Remastered', 'Deluxe Edition',
+    'First Press', 'Original Recording', 'Studio Album', 'Live Concert'
+  ];
+  const plakLabels = [
+    'Kervan Plak', 'Yonca Plak', 'Odeon', 'Philips Records', 'Polydor', 'CBS Records',
+    'RCA Victor', 'Atlantic Records', 'EMI', 'Decca Records', 'Capitol Records',
+    'Verve Records', 'Blue Note', 'Impulse!', 'Columbia Records', 'Warner Bros.',
+    'Elektra Records', 'A&M Records', 'Island Records', 'Virgin Records'
+  ];
+  const plakFormats = ['LP (12", 33 RPM)', 'EP (7", 45 RPM)', 'Single (7", 45 RPM)', '12" Single', '10" LP', 'Box Set', 'Picture Disc', 'Colored Vinyl'];
+  const plakGenres = ['Rock', 'Pop', 'Jazz', 'Blues', 'Klasik', 'Anadolu Pop', 'Psikodelik', 'Funk', 'Soul', 'Disco', 'New Wave', 'Punk', 'Metal', 'Folk', 'Electronic', 'Hip Hop'];
   const files = [];
 
   for (let i = 1; i <= 60; i++) {
@@ -225,8 +246,40 @@ function generateMockFiles(type) {
         _scale: ['1:64', '1:43', '1:18', '1:24'][i % 4],
         _material: ['Metal', 'Metal + Plastic', 'Resin', 'Diecast'][i % 4],
       });
+    } else if (type === 'plak') {
+      const artist = plakArtists[i % plakArtists.length];
+      const album = plakAlbums[i % plakAlbums.length];
+      const label = plakLabels[i % plakLabels.length];
+      const format = plakFormats[i % plakFormats.length];
+      const genre = plakGenres[i % plakGenres.length];
+      const mockKatalogNo = `${['KAT', 'CAT', 'LBL', 'REC'][i % 4]}${String(1000 + i * 7).padStart(5, '0')}`;
+      files.push({
+        id: `mock_${type}_${i}`,
+        name: `${artist} - ${album} (${year}).pdf`,
+        category: cat,
+        webViewLink: `https://drive.google.com/drive/folders/${CONFIG.FOLDERS[type] || ''}`,
+        isMock: true,
+        _code: mockKatalogNo,
+        _katalogNo: mockKatalogNo,
+        _ulke: cat === 'Yerli' ? 'Türkiye' : cat === 'Yabancı' ? 'ABD' : 'UK',
+        _country: cat === 'Yerli' ? 'Türkiye' : cat === 'Yabancı' ? 'ABD' : 'UK',
+        _year: String(year),
+        _basimYili: String(year),
+        _basimYeri: ['İstanbul', 'Ankara', 'İzmir', 'London', 'New York', 'Los Angeles', 'Berlin', 'Paris'][i % 8],
+        _artist: artist,
+        _album: album,
+        _plakSirketi: label,
+        _format: format,
+        _genre: genre,
+        _pressing: `${['First Press', 'Reissue', 'Remaster', 'Promo', 'Test Pressing'][i % 5]}`,
+        _matrixNo: `${['A', 'B', 'C', 'D'][i % 4]}${String(10000 + i * 13).padStart(5, '0')}`,
+        _condition: ['Mint (M)', 'Near Mint (NM)', 'Very Good+ (VG+)', 'Very Good (VG)', 'Good+ (G+)'][i % 5],
+        _title: album,
+        _subtitle: artist,
+        _ozet: `${artist} — ${album} (${year}), ${label}, ${format}, ${genre}. ${['Mint', 'Near Mint', 'Very Good'][i % 3]} durumda.`,
+      });
     } else {
-      const stampTypes = ['Posta Pulu', 'Damga Pulu', 'Anma Pulu', 'Vergi Pulu', 'Harç Pulu', 'Konulu Pulu', 'Hatıra Pulu', 'Tematik Pulu', 'Resim Pulu'];
+      const stampTypes = ['Posta Pulu', 'Damga Pulu', 'Anma Pulu', 'Vergi Pulu', 'Harç Pulu', 'Konulu Pulu', 'Hatıra Pulu', 'Tematik Pulu', 'Resim Pulu', 'Adi Pulu', 'Resmi Pulu', 'Yetki Pulu', 'Gümrük Pulu', 'Blok', 'Minyatür', 'Perforasyonlu', 'Perforasyonsuz', 'Çapa', 'Kepçe', 'Hava Postası', 'Posta Havalesi', 'Ekspres', 'Kargo Pulu', 'Derleme', 'Emisyon'];
       const nominals = ['5 Kuruş', '10 Kuruş', '25 Kuruş', '50 Kuruş', '1 Lira', '5 Lira', '100 Lira', '500 Lira', '1000 Lira'];
       const mockKatalogNo = `MG${String(i).padStart(4, '0')}`;
       files.push({
@@ -244,7 +297,6 @@ function generateMockFiles(type) {
         _basimYeri: ['Ankara', 'İstanbul', 'Konya', 'İzmir', 'Bursa', 'London', 'Paris', 'Berlin'][i % 8],
         _nominal: nominals[i % nominals.length],
         _nominalDeger: nominals[i % nominals.length],
-        _type: stampTypes[i % stampTypes.length],
         _pulTipi: stampTypes[i % stampTypes.length],
         _title: `${theme} ${year}`,
         _subtitle: `${stampTypes[i % stampTypes.length]}`,
@@ -491,11 +543,11 @@ function extractStampInfoFromHtml(html) {
   // ── 8. PUL TİPİ: extract from text ──
   const stampTypePatterns = [
     // çok kelimeli tipler önce
-    /\b(hazır\s+antetli|ılk\s+gün|prime\s+cover|first\s+day|air\s*mail|posta\s+havalesi|kargo\s+pulu)\b/i,
+    /\b(hazır\s+antetli|ılk\s+gün|prime\s+cover|first\s+day|air\s*mail|posta\s+havalesi|kargo\s+pulu|posta\s+kutusu|posta\s+kasası)\b/i,
     // tek/kelimeli tipler: tam eşleşme (\b...\b)
-    /\b(vergi\s+pulu|vergi\s+pul|harç\s+pulu|harç\s+pul|damga\s+pulu|damga\s+pul|posta\s+pulu|posta\s+pul|anma\s+pulu|anma\s+pul|konulu\s+pulu|konulu\s+pul|tematik\s+pulu|tematik\s+pul|hatıra\s+pulu|hatıra\s+pul|anı\s+pulu|anı\s+pul|resim\s+pulu|resim\s+pul|adi\s+pulu|adi\s+pul|tellaloğlu|davalık|mühürlü|derleme|emisyon)\b/i,
+    /\b(vergi\s+pulu|vergi\s+pul|harç\s+pulu|harç\s+pul|damga\s+pulu|damga\s+pul|posta\s+pulu|posta\s+pul|anma\s+pulu|anma\s+pul|konulu\s+pulu|konulu\s+pul|tematik\s+pulu|tematik\s+pul|hatıra\s+pulu|hatıra\s+pul|anı\s+pulu|anı\s+pul|resim\s+pulu|resim\s+pul|adi\s+pulu|adi\s+pul|tellaloğlu|davalık|mühürlü|derleme|emisyon|blok|souvenir|sheet|minyatür|minyatur|çapa|kepçe|perforasyon|perforasyonlu|perforasyonsuz|gümrük|gumruk|telegraph|telgraf|parsel|paket|hava\s+postası|hava\s+postasi|express|ekspres|resmi|resmî|resmi\s+pulu|resmi\s+pul|yetki|yetki\s+pulu|yetki\s+pul|resmî\s+pulu|resmi\s+pulu)\b/i,
     // İngilizce tipler
-    /\b(commemorative|definitive|posta\s+pulu|posta\s+pul|revenue|cinderella|charity|charity\s+stamp)\b/i,
+    /\b(commemorative|definitive|posta\s+pulu|posta\s+pul|revenue|cinderella|charity|charity\s+stamp|airmail|air\s+mail|postage|fiscal|official|semi-postal|semi\s+postal|postage\s+due|postage-due|registration|registered|express|special\s+delivery|parcel|package|newspaper|newspaper\s+stamp|telegraph|telegram)\b/i,
     // fallback: sadece "pul" kelimesi varsa tip bulamadık
     /\b(pul)\b/i
   ];
@@ -522,10 +574,67 @@ function extractStampInfoFromHtml(html) {
       if (pulTipi) break;
     }
   }
-  // Normalize: tam creedini büyük harfle başlatacak şekilde düzelt
+  // Normalize: ilk harfi büyük yap, Türkçe karakterleri düzelt
   if (pulTipi) {
-    pulTipi = pulTipi.replace(/^\w/, c => c.toUpperCase());
+    pulTipi = pulTipi.trim();
+    // Standartlaştır: yaygın varyasyonları düzelte
+    const normalized = pulTipi.toLowerCase()
+      .replace(/posta\s+pul\b/, 'Posta Pulu')
+      .replace(/damga\s+pul\b/, 'Damga Pulu')
+      .replace(/vergi\s+pul\b/, 'Vergi Pulu')
+      .replace(/harç\s+pul\b/, 'Harç Pulu')
+      .replace(/harc\s+pul\b/, 'Harç Pulu')
+      .replace(/anma\s+pul\b/, 'Anma Pulu')
+      .replace(/konulu\s+pul\b/, 'Konulu Pulu')
+      .replace(/tematik\s+pul\b/, 'Tematik Pulu')
+      .replace(/hatıra\s+pul\b/, 'Hatıra Pulu')
+      .replace(/anı\s+pul\b/, 'Anı Pulu')
+      .replace(/resim\s+pul\b/, 'Resim Pulu')
+      .replace(/adi\s+pul\b/, 'Adi Pulu')
+      .replace(/resmi\s+pul\b/, 'Resmi Pulu')
+      .replace(/resmî\s+pul\b/, 'Resmi Pulu')
+      .replace(/yetki\s+pul\b/, 'Yetki Pulu')
+      .replace(/gümrük\s+pul\b/, 'Gümrük Pulu')
+      .replace(/gumruk\s+pul\b/, 'Gümrük Pulu')
+      .replace(/posta\s+havalesi/, 'Posta Havalesi')
+      .replace(/hava\s+postas[ıi]/, 'Hava Postası')
+      .replace(/blok/, 'Blok')
+      .replace(/souvenir/, 'Blok')
+      .replace(/sheet/, 'Blok')
+      .replace(/minyatür|minyatur/, 'Minyatür')
+      .replace(/perforasyonlu/, 'Perforasyonlu')
+      .replace(/perforasyonsuz/, 'Perforasyonsuz')
+      .replace(/çapa/, 'Çapa')
+      .replace(/kepçe/, 'Kepçe')
+      .replace(/^pul$/, 'Pul')
+      .replace(/^damga$/, 'Damga Pulu')
+      .replace(/^posta$/, 'Posta Pulu')
+      .replace(/^vergi$/, 'Vergi Pulu')
+      .replace(/^harç$/, 'Harç Pulu')
+      .replace(/^harc$/, 'Harç Pulu')
+      .replace(/^anma$/, 'Anma Pulu')
+      .replace(/^konulu$/, 'Konulu Pulu')
+      .replace(/^tematik$/, 'Tematik Pulu')
+      .replace(/^hatıra$/, 'Hatıra Pulu')
+      .replace(/^anı$/, 'Anı Pulu')
+      .replace(/^resim$/, 'Resim Pulu')
+      .replace(/^adi$/, 'Adi Pulu')
+      .replace(/^resmi$/, 'Resmi Pulu')
+      .replace(/^yetki$/, 'Yetki Pulu')
+      .replace(/^gümrük$/, 'Gümrük Pulu')
+      .replace(/^gumruk$/, 'Gümrük Pulu')
+      .replace(/^blok$/, 'Blok')
+      .replace(/^souvenir$/, 'Blok')
+      .replace(/^sheet$/, 'Blok')
+      .replace(/^minyatür$/, 'Minyatür')
+      .replace(/^minyatur$/, 'Minyatür');
+    
+    // İlk harf büyük, diğerleri küçük (Türkçe karakterlerle uyumlu)
+    pulTipi = normalized.charAt(0).toLocaleUpperCase('tr') + normalized.slice(1).toLocaleLowerCase('tr');
   }
+
+  // NOT: Artık tipleri "Damga pulu" tek etiketi altında TOPILAMIYORUZ
+  // Her pul tipi kendi adıyla korunuyor (Posta Pulu, Damga Pulu, Vergi Pulu, Harç Pulu, Anma Pulu, vb.)
 
   // ── 9. BASIM YERİ: extract from table cells or text ──
   // Note: Turkish chars (ı, ş, ğ, ü, ö, ç) break \b word boundary in JS regex,
@@ -630,7 +739,213 @@ function extractStampInfoFromHtml(html) {
     nominalDeger, pulTipi, ozet
   };
 }
+// ─── PLAK (VINYL) EXTRACTOR ────────────────────────────────────────────────
+function extractPlakInfoFromHtml(html) {
+  const EMPTY = { title: '', subtitle: '', image: '', code: '', artist: '', album: '', plakSirketi: '', katalogNo: '', year: '', format: '', country: '', genre: '', pressing: '', matrixNo: '', condition: '' };
+  if (!html) return EMPTY;
 
+  const cleanHtml = html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '');
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(cleanHtml, 'text/html');
+  const bodyText = doc.body ? doc.body.textContent || '' : '';
+  const allText = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  const scanText = (bodyText + ' ' + allText).toLowerCase();
+
+  let title = '', subtitle = '', image = '', code = '';
+  let artist = '', album = '', plakSirketi = '', katalogNo = '', year = '', format = '', country = '';
+  let genre = '', pressing = '', matrixNo = '', condition = '';
+
+  // ── 1. TITLE: <h1> → .title → <title> ──
+  const h1El = doc.querySelector('h1');
+  if (h1El) title = h1El.textContent.trim();
+  if (!title) {
+    const sel = doc.querySelector('.title, .name, h2, h3');
+    if (sel) title = sel.textContent.trim();
+  }
+  if (!title) {
+    const tEl = doc.querySelector('title');
+    if (tEl) title = tEl.textContent.trim();
+  }
+
+  // ── 2. IMAGE: first <img> ──
+  const imgEl = doc.querySelector('img');
+  if (imgEl) image = imgEl.getAttribute('src') || '';
+
+  // ── 3. TABLE-BASED EXTRACTION (key: value in <tr>/<td>/<th>) ──
+  const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
+  const tableData = {};
+  if (rows) {
+    for (const row of rows) {
+      const thMatches = row.match(/<th[^>]*>([\s\S]*?)<\/th>/gi);
+      const tdMatches = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
+      let key = '', val = '';
+      if (thMatches && tdMatches && tdMatches.length >= 1) {
+        key = thMatches[0].replace(/<[^>]+>/g, '').trim();
+        val = tdMatches[0].replace(/<[^>]+>/g, '').trim();
+      } else if (tdMatches && tdMatches.length >= 2) {
+        key = tdMatches[0].replace(/<[^>]+>/g, '').trim();
+        val = tdMatches[1].replace(/<[^>]+>/g, '').trim();
+      }
+      if (key && val) tableData[key.toLowerCase().trim()] = val;
+    }
+  }
+  // Also scan DOM table cells
+  const cells = doc.querySelectorAll('td, th');
+  for (let i = 0; i < cells.length; i++) {
+    const t = cells[i].textContent.trim();
+    const nextTd = cells[i].nextElementSibling;
+    if (nextTd && t.length < 50) {
+      tableData[t.toLowerCase().trim()] = nextTd.textContent.trim();
+    }
+  }
+
+  // ── 4. MAP TABLE DATA TO PLAK FIELDS ──
+  const findKey = (...keys) => {
+    for (const k of keys) {
+      const low = k.toLowerCase();
+      for (const tk of Object.keys(tableData)) {
+        if (tk.includes(low) || low.includes(tk)) return tableData[tk];
+      }
+    }
+    return '';
+  };
+
+  artist = findKey('sanatçı', 'sanatci', 'artist', 'müzisyen', 'ses sanatçısı', 'group', 'grup', 'performer');
+  album = findKey('albüm', 'album', 'plak adı', 'eser', 'konu', 'title', 'lp', 'ep');
+  plakSirketi = findKey('plak şirketi', 'plak sirketi', 'şirket', 'sirket', 'label', 'record label', 'yayın', 'yayinevi', 'firma', 'şirketi');
+  katalogNo = findKey('katalog', 'catalog', 'kat no', 'no', 'numara', 'katalog no', 'catalog no');
+  year = findKey('yıl', 'yil', 'year', 'tarih', 'basım yılı', 'basim yili', 'yayın yılı', 'release year');
+  format = findKey('format', 'tür', 'tur', 'tip', 'tipi', 'format:', 'plak formatı', 'çap', 'cap', 'rpm', 'devir', 'boyut');
+  country = findKey('ülke', 'ulke', 'country', 'menşe', 'mense', 'menşei', 'origin', 'press country');
+  genre = findKey('tür', 'tur', 'genre', 'style', 'müzik türü', 'muzik turu', 'kategori');
+  pressing = findKey('basım', 'basim', 'pressing', 'press', 'reissue', 'remaster', 'baskı', 'baski', 'edition', 'sürüm', 'surum');
+  matrixNo = findKey('matriks', 'matrix', 'runout', 'run-out', 'dead wax', 'katalog no', 'catalog no', 'matris');
+  condition = findKey('durum', 'condition', 'grade', 'grading', 'kondisyon');
+
+  // ── 5. FALLBACK: scan text for common vinyl patterns ──
+  if (!year) {
+    const yearMatch = scanText.match(/\b((?:19|20)\d{2})\b/);
+    if (yearMatch) year = yearMatch[1];
+  }
+  if (!format) {
+    const fmtMatch = scanText.match(/\b(lp|ep|single|45\s*rpm|33\s*rpm|78\s*rpm|7["\u2033]|12["\u2033]|10["\u2033]|vinyl|plak|cd|kaset|cassette|box\s*set|picture\s*disc|colored\s*vinyl|coloured\s*vinyl|flexi|flexi\s*disc)\b/i);
+    if (fmtMatch) format = fmtMatch[1];
+  }
+  if (!katalogNo) {
+    const kodEl = doc.querySelector('.kod, .collection-number, .catalog');
+    if (kodEl) katalogNo = kodEl.textContent.trim();
+    if (!katalogNo) {
+      const tEl = doc.querySelector('title');
+      if (tEl) {
+        const cm = tEl.textContent.match(/\b([A-Z]{2,5}[-\s]?\d{2,8})\b/);
+        if (cm) katalogNo = cm[1];
+      }
+    }
+  }
+
+  // ── 6. SUBTITLE / ARTIST fallback from subtitle ──
+  const subEl = doc.querySelector('.subtitle, .sub, .artist, .sanatçı, .sanatci');
+  if (subEl) subtitle = subEl.textContent.trim();
+  if (!artist && subtitle) artist = subtitle;
+
+  // ── 7. ARTIST-ALBUM split from title ("Artist - Album" pattern) ──
+  if (title && !artist) {
+    const parts = title.split(/\s*[—–\-|]\s*/);
+    if (parts.length >= 2) {
+      artist = parts[0].trim();
+      album = parts.slice(1).join(' — ').trim();
+    }
+  }
+  if (!album && title) album = title;
+  code = katalogNo;
+
+  // ── 8. NORMALIZE EXTRACTED FIELDS ──
+  // Format normalization
+  if (format) {
+    const f = format.toLowerCase().trim();
+    if (/(^lp$|33\s*rpm|long\s*play|12["\u2033])/.test(f) && !/ep|single|7["\u2033]/.test(f)) format = 'LP (12", 33 RPM)';
+    else if (/(^ep$|extended\s*play|45\s*rpm.*ep|7["\u2033].*ep)/.test(f)) format = 'EP (7", 45 RPM)';
+    else if (/(^single$|45\s*rpm|7["\u2033])/.test(f) && !/ep/.test(f)) format = 'Single (7", 45 RPM)';
+    else if (/12["\u2033].*single|12["\u2033].*45/.test(f)) format = '12" Single (45 RPM)';
+    else if (/10["\u2033]/.test(f)) format = '10" LP';
+    else if (/box\s*set/.test(f)) format = 'Box Set';
+    else if (/picture\s*disc/.test(f)) format = 'Picture Disc';
+    else if (/colored\s*vinyl|coloured\s*vinyl/.test(f)) format = 'Colored Vinyl';
+    else if (/flexi/.test(f)) format = 'Flexi Disc';
+    else if (/78\s*rpm/.test(f)) format = '78 RPM';
+    else format = format.charAt(0).toUpperCase() + format.slice(1).toLowerCase();
+  }
+
+  // Label/Plak Şirketi normalization
+  if (plakSirketi) {
+    plakSirketi = plakSirketi
+      .replace(/plak\s*şirketi\s*/gi, '')
+      .replace(/plak\s*sirketi\s*/gi, '')
+      .replace(/record\s*label\s*/gi, '')
+      .replace(/şirket\s*/gi, '')
+      .replace(/sirket\s*/gi, '')
+      .replace(/yayın\s*/gi, '')
+      .replace(/yayinevi\s*/gi, '')
+      .replace(/firma\s*/gi, '')
+      .trim();
+    // Capitalize first letter of each word
+    plakSirketi = plakSirketi.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  }
+
+  // Genre normalization
+  if (genre) {
+    const g = genre.toLowerCase().trim();
+    const genreMap = {
+      'rock': 'Rock', 'pop': 'Pop', 'jazz': 'Jazz', 'blues': 'Blues',
+      'klasik': 'Klasik', 'classical': 'Klasik', 'anadolu pop': 'Anadolu Pop',
+      'psychedelic': 'Psikodelik', 'psikodelik': 'Psikodelik', 'funk': 'Funk',
+      'soul': 'Soul', 'disco': 'Disco', 'new wave': 'New Wave', 'punk': 'Punk',
+      'metal': 'Metal', 'heavy metal': 'Metal', 'folk': 'Folk', 'halk müziği': 'Folk',
+      'electronic': 'Elektronik', 'electronica': 'Elektronik', 'hip hop': 'Hip Hop',
+      'rap': 'Hip Hop', 'reggae': 'Reggae', 'country': 'Country', 'ambient': 'Ambient',
+      'soundtrack': 'Soundtrack', 'ost': 'Soundtrack', 'world': 'World', 'dünya müziği': 'World'
+    };
+    genre = genreMap[g] || genre.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  }
+
+  // Pressing normalization
+  if (pressing) {
+    const p = pressing.toLowerCase().trim();
+    if (/first\s*press|original\s*press|ilk\s*basım|ilk\s*basim/.test(p)) pressing = 'First Press';
+    else if (/reissue|re-issue|yeniden\s*basım|yeniden\s*basim/.test(p)) pressing = 'Reissue';
+    else if (/remaster|remastered|remaster edilmiş/.test(p)) pressing = 'Remaster';
+    else if (/promo|promotional|promosyon/.test(p)) pressing = 'Promo';
+    else if (/test\s*press|test\s*pressing|deneme\s*basım/.test(p)) pressing = 'Test Pressing';
+    else if (/limited|sınırlı|limited\s*edition/.test(p)) pressing = 'Limited Edition';
+    else if (/deluxe|özel\s*seri/.test(p)) pressing = 'Deluxe Edition';
+    else pressing = pressing.charAt(0).toUpperCase() + pressing.slice(1).toLowerCase();
+  }
+
+  // Condition normalization
+  if (condition) {
+    const c = condition.toLowerCase().trim();
+    const condMap = {
+      'mint': 'Mint (M)', 'm': 'Mint (M)',
+      'near mint': 'Near Mint (NM)', 'nm': 'Near Mint (NM)',
+      'very good+': 'Very Good+ (VG+)', 'vg+': 'Very Good+ (VG+)',
+      'very good': 'Very Good (VG)', 'vg': 'Very Good (VG)',
+      'good+': 'Good+ (G+)', 'g+': 'Good+ (G+)',
+      'good': 'Good (G)', 'g': 'Good (G)',
+      'fair': 'Fair (F)', 'f': 'Fair (F)',
+      'poor': 'Poor (P)', 'p': 'Poor (P)'
+    };
+    condition = condMap[c] || condition.charAt(0).toUpperCase() + condition.slice(1);
+  }
+
+  // Cleanup
+  artist = artist.replace(/MERT\s+GÜVENTÜRK\s+KOLEKSİYONU/gi, '').replace(/KOLEKSİYON(U)?/gi, '').trim();
+  album = album.replace(/MERT\s+GÜVENTÜRK\s+KOLEKSİYONU/gi, '').replace(/KOLEKSİYON(U)?/gi, '').trim();
+
+  return { title, subtitle, image, code, artist, album, plakSirketi, katalogNo, year, format, country, genre, pressing, matrixNo, condition };
+}
 const DB_NAME = 'PullukDB';
 const DB_VERSION = 5;
 const STORE_NAME = 'fileCache';
@@ -685,6 +1000,14 @@ async function getFileFromCache(file) {
       file._nominalDeger = cached._nominalDeger;
       file._pulTipi = cached._pulTipi;
       file._ozet = cached._ozet;
+      file._artist = cached._artist;
+      file._album = cached._album;
+      file._plakSirketi = cached._plakSirketi;
+      file._format = cached._format;
+      file._genre = cached._genre;
+      file._pressing = cached._pressing;
+      file._matrixNo = cached._matrixNo;
+      file._condition = cached._condition;
       return true;
     }
   } catch (e) {
@@ -715,7 +1038,15 @@ async function saveFileToCache(file) {
       _basimYeri: file._basimYeri,
       _nominalDeger: file._nominalDeger,
       _pulTipi: file._pulTipi,
-      _ozet: file._ozet
+      _ozet: file._ozet,
+      _artist: file._artist,
+      _album: file._album,
+      _plakSirketi: file._plakSirketi,
+_format: file._format,
+      _genre: file._genre,
+      _pressing: file._pressing,
+      _matrixNo: file._matrixNo,
+      _condition: file._condition
     };
     store.put(data);
   } catch (e) {
@@ -752,6 +1083,23 @@ async function processPreviewQueue() {
             saveFileToCache(file);
           }
         }
+        // Plak-specific: extract from html if not yet done
+        if (gallery && gallery.id === 'plak' && !file._artist && file._htmlContent) {
+          const plakData = extractPlakInfoFromHtml(file._htmlContent);
+          file._artist = plakData.artist;
+          file._album = plakData.album;
+          file._plakSirketi = plakData.plakSirketi;
+          file._format = plakData.format;
+          file._genre = plakData.genre;
+          file._pressing = plakData.pressing;
+          file._matrixNo = plakData.matrixNo;
+          file._condition = plakData.condition;
+          if (plakData.artist && !file._subtitle) file._subtitle = plakData.artist;
+          if (plakData.album) file._title = plakData.album;
+          if (plakData.katalogNo) file._katalogNo = plakData.katalogNo;
+          if (plakData.year) file._year = plakData.year;
+          saveFileToCache(file);
+        }
         updateCardUI(item);
         return;
       }
@@ -764,6 +1112,23 @@ async function processPreviewQueue() {
             file._basimYeri = reExtracted.basimYeri;
             saveFileToCache(file);
           }
+        }
+        // Plak-specific: extract from cached html if not yet done
+        if (gallery && gallery.id === 'plak' && !file._artist && file._htmlContent) {
+          const plakData = extractPlakInfoFromHtml(file._htmlContent);
+          file._artist = plakData.artist;
+          file._album = plakData.album;
+          file._plakSirketi = plakData.plakSirketi;
+          file._format = plakData.format;
+          file._genre = plakData.genre;
+          file._pressing = plakData.pressing;
+          file._matrixNo = plakData.matrixNo;
+          file._condition = plakData.condition;
+          if (plakData.artist && !file._subtitle) file._subtitle = plakData.artist;
+          if (plakData.album) file._title = plakData.album;
+          if (plakData.katalogNo) file._katalogNo = plakData.katalogNo;
+          if (plakData.year) file._year = plakData.year;
+          saveFileToCache(file);
         }
         updateCardUI(item);
         if (gallery) gallery.checkAndExtractCategory(file, card);
@@ -799,8 +1164,8 @@ async function processPreviewQueue() {
         file._code = extracted.code;
         file._country = extracted.country;
         file._year = extracted.year;
-        file._nominal = extracted.denomination;
-        file._type = extracted.typeInfo;
+file._nominal = extracted.denomination;
+        file._pulTipi = extracted.pulTipi;
         file._katalogNo = extracted.katalogNo;
         file._ulke = extracted.ulke;
         file._basimYili = extracted.basimYili;
@@ -809,6 +1174,24 @@ async function processPreviewQueue() {
         file._pulTipi = extracted.pulTipi;
         file._ozet = extracted.ozet;
         file._htmlContent = html;
+
+        // Plak-specific extraction
+        if (gallery && gallery.id === 'plak') {
+          const plakData = extractPlakInfoFromHtml(html);
+          file._artist = plakData.artist;
+          file._album = plakData.album;
+          file._plakSirketi = plakData.plakSirketi;
+          file._format = plakData.format;
+          file._genre = plakData.genre;
+          file._pressing = plakData.pressing;
+          file._matrixNo = plakData.matrixNo;
+          file._condition = plakData.condition;
+          // Override generic fields with plak-specific data
+          if (plakData.artist && !file._subtitle) file._subtitle = plakData.artist;
+          if (plakData.album) file._title = plakData.album;
+          if (plakData.katalogNo) file._katalogNo = plakData.katalogNo;
+          if (plakData.year) file._year = plakData.year;
+        }
 
         saveFileToCache(file);
         updateCardUI(item);
@@ -994,12 +1377,53 @@ function updateCardUI(item) {
         if (tableData[k]) { material = tableData[k]; break; }
       }
       if (scale) metaSpans[0].textContent = scale;
-      if (material) metaSpans[1].textContent = material;
-    }
-  }
-}
+if (material) metaSpans[1].textContent = material;
+     }
+   }
 
-// ─── GALLERY MANAGER ───────────────────────────────────────────────────────
+   // Plak-specific updates: update vinyl information from extracted HTML data
+   if (galleryId === 'plak' && card) {
+     // Calculate file name without extension for Koleksiyon No
+     const fileNameNoExt = file.name.replace(/\.(html|htm|pdf)$/i, '');
+     
+     // Update title and subtitle if they were extracted
+     if (titleEl) titleEl.textContent = file._title || '';
+     if (subEl) subEl.textContent = file._subtitle || '';
+     
+     // Update image if available
+     if (imgEl && file._image) {
+       imgEl.src = file._image;
+       imgEl.style.display = 'block';
+       if (fallbackEl) fallbackEl.style.display = 'none';
+     }
+     
+     // Update all plak-specific fields
+     const plakFields = [
+       { el: 'plak-field-title', value: file._album || '' },
+       { el: 'plak-field-collection', value: fileNameNoExt || '' },
+       { el: 'plak-field-artist', value: file._artist || '' },
+       { el: 'plak-field-label', value: file._plakSirketi || '' },
+       { el: 'plak-field-genre', value: file._genre || '' },
+       { el: 'plak-field-katalog', value: file._katalogNo || '' },
+       { el: 'plak-field-year', value: file._year || '' },
+       { el: 'plak-field-format', value: file._format || '' },
+       { el: 'plak-field-pressing', value: file._pressing || '' },
+       { el: 'plak-field-matrix', value: file._matrixNo || '' }
+     ];
+     
+     plakFields.forEach(field => {
+       const fieldEl = card.querySelector(`.${field.el}`);
+       if (fieldEl) {
+         const valueEl = fieldEl.querySelector('.pdf-card-field__value');
+         if (valueEl) {
+           valueEl.textContent = field.value || '—';
+         }
+       }
+     });
+   }
+ }
+
+ // ─── GALLERY MANAGER ───────────────────────────────────────────────────────
 class GalleryManager {
   constructor(id, folderId) {
     this.id = id; // 'galeri', 'diecast', 'plak'
@@ -1242,6 +1666,14 @@ class GalleryManager {
         (file._pulTipi || '').toLowerCase().includes(q) ||
         (file._basimYeri || '').toLowerCase().includes(q) ||
         (file._ozet || '').toLowerCase().includes(q) ||
+        (file._artist || '').toLowerCase().includes(q) ||
+        (file._album || '').toLowerCase().includes(q) ||
+        (file._plakSirketi || '').toLowerCase().includes(q) ||
+        (file._format || '').toLowerCase().includes(q) ||
+        (file._genre || '').toLowerCase().includes(q) ||
+        (file._pressing || '').toLowerCase().includes(q) ||
+        (file._matrixNo || '').toLowerCase().includes(q) ||
+        (file._condition || '').toLowerCase().includes(q) ||
         file.name.toLowerCase().includes(q);
       const catMatch = cat === 'all' || (file.category || '').toLocaleLowerCase('tr') === cat;
       return nameMatch && catMatch;
@@ -1376,6 +1808,146 @@ class GalleryManager {
         window.open(viewUrl, '_blank', 'noopener,noreferrer');
       } else {
         openViewer(file._title || 'Detay', file.id, viewUrl, file.mimeType, this);
+      }
+    };
+    card.addEventListener('click', openCard);
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCard(); }
+    });
+
+    return card;
+  }
+
+  // ─── PLAK CARD (Vinyl-specific) ─────────────────────────────────────────
+  createPlakCard(file, index) {
+    const bgClass = BG_CLASSES[index % BG_CLASSES.length];
+    const viewUrl = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
+    const { icon } = getFileType(file.mimeType, file.name);
+
+    // Extract plak data from HTML if available (for non-mock files)
+    let plakData = {};
+    if (!file.isMock && file._htmlContent) {
+      plakData = extractPlakInfoFromHtml(file._htmlContent);
+    }
+
+    const code = file._code || plakData.code || '';
+    const katalogNo = file._katalogNo || plakData.katalogNo || code || '';
+    const country = file._country || file._ulke || plakData.country || '';
+    const year = file._year || file._basimYili || plakData.year || '';
+
+    const initialTitle = file._title || plakData.title || (file.isMock ? file.name.replace(/\.(pdf|html|htm)$/i, '') : file.name.replace(/\.(html|htm|pdf)$/i, ''));
+    const hasImage = Boolean(file._image || plakData.image);
+
+    // Use extracted data with fallback to file object, then to title parsing
+    let artist = file._artist || plakData.artist || '';
+    let albumName = file._album || plakData.album || initialTitle;
+    let plakSirketi = file._plakSirketi || plakData.plakSirketi || '';
+    let formatInfo = file._format || plakData.format || '';
+    let genre = file._genre || plakData.genre || '';
+    let pressing = file._pressing || plakData.pressing || '';
+    let matrixNo = file._matrixNo || plakData.matrixNo || '';
+
+    // Fallback: split "Artist - Album" from title if extraction gave us nothing
+    if (!artist && initialTitle) {
+      const titleSplit = initialTitle.split(/\s*[—–\-|]\s*/);
+      if (titleSplit.length >= 2) {
+        artist = titleSplit[0].trim();
+        albumName = titleSplit.slice(1).join(' — ').trim();
+      }
+    }
+    if (!albumName) albumName = initialTitle;
+
+    const fileNameNoExt = file.name.replace(/\.(html|htm|pdf)$/i, '');
+
+    const card = document.createElement('div');
+    card.className = 'pdf-card plak-card reveal';
+    card.style.cursor = 'pointer';
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', `${initialTitle} — görüntüle`);
+    card.dataset.name = initialTitle.toLowerCase();
+    card.dataset.category = (file.category || '').toLowerCase();
+    card.dataset.fileId = file.id || '';
+    card.dataset.viewUrl = viewUrl;
+    card.dataset.mimeType = file.mimeType || '';
+    if (file.isMock) card.dataset.mock = '1';
+
+    const imageSrc = hasImage ? (file._image || plakData.image) : '';
+
+    card.innerHTML = `
+      <div class="pdf-card-thumb">
+        <div class="pdf-icon-frame plak-icon-frame ${bgClass}">
+          <img class="pdf-icon-img card-img-el" src="${imageSrc}" alt="${initialTitle}" ${imageSrc ? '' : 'style="display:none;"'} />
+          <span class="pdf-icon-fallback card-fallback-el" ${imageSrc ? 'style="display:none;"' : ''} aria-hidden="true">${icon}</span>
+        </div>
+      </div>
+      <div class="pdf-card-main">
+        <div class="pdf-card-info plak-card-info">
+          <div class="pdf-card-field plak-field-title">
+            <span class="pdf-card-field__label">Albüm / Plak</span>
+            <span class="pdf-card-field__value pdf-card-title-value">${albumName || initialTitle || '—'}</span>
+          </div>
+          <div class="pdf-card-field plak-field-collection">
+            <span class="pdf-card-field__label">Koleksiyon No</span>
+            <span class="pdf-card-field__value">${fileNameNoExt || '—'}</span>
+          </div>
+          <div class="pdf-card-field plak-field-artist">
+            <span class="pdf-card-field__label">Sanatçı</span>
+            <span class="pdf-card-field__value">${artist || '—'}</span>
+          </div>
+          <div class="pdf-card-field plak-field-label">
+            <span class="pdf-card-field__label">Plak Şirketi</span>
+            <span class="pdf-card-field__value">${plakSirketi || '—'}</span>
+          </div>
+          <div class="pdf-card-field plak-field-genre">
+            <span class="pdf-card-field__label">Tür</span>
+            <span class="pdf-card-field__value">${genre || '—'}</span>
+          </div>
+          <div class="pdf-card-field plak-field-katalog">
+            <span class="pdf-card-field__label">Katalog No</span>
+            <span class="pdf-card-field__value">${katalogNo || '—'}</span>
+          </div>
+          <div class="pdf-card-field plak-field-year">
+            <span class="pdf-card-field__label">Yıl</span>
+            <span class="pdf-card-field__value">${year || '—'}</span>
+          </div>
+          <div class="pdf-card-field plak-field-format">
+            <span class="pdf-card-field__label">Format</span>
+            <span class="pdf-card-field__value">${formatInfo || '—'}</span>
+          </div>
+          <div class="pdf-card-field plak-field-pressing">
+            <span class="pdf-card-field__label">Basım</span>
+            <span class="pdf-card-field__value">${pressing || '—'}</span>
+          </div>
+          <div class="pdf-card-field plak-field-matrix">
+            <span class="pdf-card-field__label">Matriks No</span>
+            <span class="pdf-card-field__value">${matrixNo || '—'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="pdf-card-action">
+        <span class="pdf-open-btn" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </span>
+      </div>
+    `;
+
+    const imgEl = card.querySelector('.card-img-el');
+    const fallbackEl = card.querySelector('.card-fallback-el');
+
+    // Queue for preview extraction if we don't have full data yet
+    if (!file.isMock && (!file._artist || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
+      if (CONFIG.GOOGLE_API_KEY.trim()) {
+        previewQueue.push({ file, titleEl: null, subEl: null, imgEl, fallbackEl, codeEl: null, card, gallery: this, koleksiyonEl: null, ulkeEl: null, yilEl: null, nominalEl: null, tipiEl: null, galleryId: 'plak' });
+        processPreviewQueue();
+      }
+    }
+
+    const openCard = () => {
+      if (file.isMock) {
+        window.open(viewUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        openViewer(file._title || initialTitle || 'Detay', file.id, viewUrl, file.mimeType, this);
       }
     };
     card.addEventListener('click', openCard);
@@ -1587,6 +2159,7 @@ class GalleryManager {
       return;
     }
     const isDiecast = this.id === 'diecast';
+    const isPlak = this.id === 'plak';
     const cardSelector = isDiecast ? '.diecast-card' : '.pdf-card';
     Array.from(this.els.grid.querySelectorAll(cardSelector)).forEach(c => c.remove());
     if (this.els.empty) this.els.empty.classList.remove('is-visible');
@@ -1609,7 +2182,9 @@ class GalleryManager {
     slice.forEach((file, i) => {
       const card = isDiecast
         ? this.createDiecastCard(file, startIndex + i)
-        : this.createPdfCard(file, startIndex + i, this.id);
+        : isPlak
+          ? this.createPlakCard(file, startIndex + i)
+          : this.createPdfCard(file, startIndex + i, this.id);
       this.els.grid.appendChild(card);
     });
 
@@ -1931,8 +2506,33 @@ function initBackToTop() {
   });
 }
 
+// ─── PREVIEW CAROUSEL ─────────────────────────────────────────────────────
+function initPreviewCarousel() {
+  const list = document.querySelector('.preview-images-list');
+  const img = document.querySelector('#previewCarousel .preview-image');
+  if (!list || !img) return;
+
+  const urls = Array.from(list.querySelectorAll('a'))
+    .map(a => a.getAttribute('href'))
+    .filter(Boolean);
+
+  if (urls.length === 0) return;
+
+  let current = Math.floor(Math.random() * urls.length);
+  img.src = urls[current];
+
+  setInterval(() => {
+    let next;
+    do { next = Math.floor(Math.random() * urls.length); } while (next === current && urls.length > 1);
+    current = next;
+    img.style.opacity = '0';
+    setTimeout(() => { img.src = urls[current]; img.style.opacity = '1'; }, 250);
+  }, 5000);
+}
+
 // ─── MAIN INIT ─────────────────────────────────────────────────────────────
 async function init() {
+  initPreviewCarousel();
   initTheme();
   initViewer();
   initMobileNav();
