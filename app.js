@@ -515,6 +515,13 @@ function extractStampInfoFromHtml(html) {
     const denomMatch = allText.match(/(?:değer|deger|nominal|value|bedel|kiymet|fiyat|tutar|birim)[:\s]+([^,;\n]{3,40})/i);
     if (denomMatch) nominalDeger = denomMatch[1].trim();
   }
+  // Clean up nominal value: strip parenthetical content like "(G..." from "Değer 6 Kuruş (G..."
+  if (nominalDeger) {
+    nominalDeger = nominalDeger.replace(/\s*\([^)]*\)\s*$/, '').trim(); // remove (content)
+    nominalDeger = nominalDeger.replace(/\s*\(.*$/, '').trim();          // remove (unclosed...
+    // Also strip common prefixes like "Değer", "Değeri", "Nominal" if present
+    nominalDeger = nominalDeger.replace(/^(değer|değeri|deger|nominal|bedel|kiymet|fiyat|tutar|birim)[:\s]+/i, '').trim();
+  }
 
   // ── 6. ÜLKE: extract from text using known country keywords ──
   const countryInfo = STAMP_COUNTRIES.find(c => c.keywords.some(kw => scanText.includes(kw)));
@@ -541,6 +548,18 @@ function extractStampInfoFromHtml(html) {
   }
 
   // ── 8. PUL TİPİ: extract from text ──
+  // First, check for "****" pattern which indicates Damga Pulu
+  const asteriskDamga = allText.match(/\*{4,}/);
+  if (asteriskDamga) {
+    pulTipi = 'Damga Pulu';
+  }
+  // Check for "damga" keyword (with optional "fiscal" nearby)
+  if (!pulTipi) {
+    const damgaMatch = allText.match(/\b(fiscal\s+)?damga\b/i);
+    if (damgaMatch) {
+      pulTipi = 'Damga Pulu';
+    }
+  }
   const stampTypePatterns = [
     // çok kelimeli tipler önce
     /\b(hazır\s+antetli|ılk\s+gün|prime\s+cover|first\s+day|air\s*mail|posta\s+havalesi|kargo\s+pulu|posta\s+kutusu|posta\s+kasası)\b/i,
