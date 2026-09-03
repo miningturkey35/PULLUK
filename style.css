@@ -1132,12 +1132,15 @@ html[data-theme="dark"] .viewer-collection {
 .viewer-ext-link:hover { border-color: var(--azure); color: var(--azure); }
 
 .viewer-close {
-  width: 36px; height: 36px; border-radius: 50%;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 16px; border-radius: 999px;
   background: var(--white); border: 1.5px solid var(--line);
-  color: var(--ink); display: flex; align-items: center; justify-content: center;
-  transition: all .22s ease; flex-shrink: 0;
+  color: var(--ink); flex-shrink: 0;
+  font-family: var(--font-mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; font-weight: 600;
+  transition: all .22s ease;
 }
-.viewer-close:hover { background: var(--coral); border-color: var(--coral); color: #fff; transform: rotate(90deg); }
+.viewer-close svg { flex-shrink: 0; }
+.viewer-close:hover { background: var(--coral); border-color: var(--coral); color: #fff; }
 
 .viewer-body { flex: 1; position: relative; overflow: hidden; }
 
@@ -1179,6 +1182,8 @@ html[data-theme="dark"] .viewer-ext-link {
 @media (max-width: 600px) {
   .viewer-container { width: 100vw; height: 100dvh; border-radius: 0; }
   .viewer-ext-link span { display: none; }
+  .viewer-close { padding: 6px 12px; font-size: .65rem; }
+  .viewer-close svg { width: 14px; height: 14px; }
 }
 
 /* ---------- Print — viewer chrome gizle ---------- */

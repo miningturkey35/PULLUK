@@ -2212,6 +2212,17 @@ class GalleryManager {
 
     this.els.grid.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
     this.renderPagination(totalPages);
+
+    // Scroll to gallery top after page change (prevents mobile scroll jump)
+    if (this._didRender) {
+      const section = document.getElementById(this.id);
+      if (section) {
+        const offset = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-h') || '66');
+        const top = section.getBoundingClientRect().top + window.scrollY - offset - 16;
+        window.scrollTo({ top, behavior: 'smooth' });
+      }
+    }
+    this._didRender = true;
   }
 
   renderPagination(totalPages) {
