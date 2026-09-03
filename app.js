@@ -298,6 +298,7 @@ function generateMockFiles(type) {
         _nominal: nominals[i % nominals.length],
         _nominalDeger: nominals[i % nominals.length],
         _pulTipi: stampTypes[i % stampTypes.length],
+        _durum: ['Damgalı', 'Damgasız', 'Damgalı · MNH', 'Damgasız · Mint'][i % 4],
         _title: `${theme} ${year}`,
         _subtitle: `${stampTypes[i % stampTypes.length]}`,
         _ozet: `${cat} menşeli, ${year} basımı ${theme} temalı ${stampTypes[i % stampTypes.length].toLowerCase()}.`,
@@ -389,7 +390,7 @@ function getFileType(mimeType, name) {
 }
 
 function extractStampInfoFromHtml(html) {
-  const EMPTY = { title: '', subtitle: '', image: '', code: '', country: '', year: '', katalogNo: '', ulke: '', basimYili: '', basimYeri: '', nominalDeger: '', pulTipi: '', ozet: '' };
+  const EMPTY = { title: '', subtitle: '', image: '', code: '', country: '', year: '', katalogNo: '', ulke: '', basimYili: '', basimYeri: '', nominalDeger: '', pulTipi: '', ozet: '', durum: '' };
   if (!html) return EMPTY;
 
   // Strip <style> and <script> blocks before parsing
@@ -410,6 +411,7 @@ function extractStampInfoFromHtml(html) {
   let pulTipi = '';
   let basimYeri = '';
   let ozet = '';
+  let durum = '';
 
   // Collect ALL visible text from the page for pattern scanning
   const bodyText = doc.body ? doc.body.textContent || '' : '';
@@ -751,11 +753,73 @@ function extractStampInfoFromHtml(html) {
     }
   }
 
+  // ── 11. DURUM: damgalı/damgasız + mint/MNH/MLH ──
+  // Table-based extraction
+  {
+    const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
+    if (rows) {
+      for (const row of rows) {
+        const thMatches = row.match(/<th[^>]*>([\s\S]*?)<\/th>/gi);
+        const tdMatches = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
+        let key = '', val = '';
+        if (thMatches && tdMatches && tdMatches.length >= 1) {
+          key = thMatches[0].replace(/<[^>]+>/g, '').trim();
+          val = tdMatches[0].replace(/<[^>]+>/g, '').trim();
+        } else if (tdMatches && tdMatches.length >= 2) {
+          key = tdMatches[0].replace(/<[^>]+>/g, '').trim();
+          val = tdMatches[1].replace(/<[^>]+>/g, '').trim();
+        }
+        const keyLower = key.toLowerCase();
+        if (/durum|condition|status|kalite|nitelik|stam?ped|cancel|mint|mnh|mlh|used|kullan[ıi]/i.test(keyLower) && val) {
+          durum = val;
+          break;
+        }
+      }
+    }
+  }
+  // Text-based extraction
+  if (!durum) {
+    // Mint/MNH/MLH detection
+    const mintMatch = scanText.match(/\b(mint\s*unused|mint\s*hinge|mint\s*no\s*hinge|mnh|mlh|mint|mn)\b/i);
+    if (mintMatch) {
+      const m = mintMatch[1].toUpperCase().trim();
+      const mintMap = { 'MINT UNUSED': 'Mint', 'MINT HINGE': 'MNH', 'MINT NO HINGE': 'MLH', 'MNH': 'MNH', 'MLH': 'MLH', 'MINT': 'Mint', 'MN': 'Mint' };
+      durum = mintMap[m] || m;
+    }
+  }
+  if (!durum) {
+    // Damgalı/Damgasız detection
+    const damgaMatch = scanText.match(/\b(damgal[ıi]|damgas[ıi]z|kullan[ıi]lm[ıi]ş|kullan[ıi]lmam[ıi]ş|cancel(?:ed|led)?|uncancel(?:ed|led)?|used|unused|postally\s+used|pre-cancel|precancel)\b/i);
+    if (damgaMatch) {
+      const d = damgaMatch[1].toLowerCase();
+      if (/damgal[ıi]|cancel|used|kullan[ıi]lm[ıi]ş|postally/.test(d)) {
+        durum = 'Damgalı';
+      } else {
+        durum = 'Damgasız';
+      }
+    }
+  }
+  // Combine: "Damgalı · MNH" or just "Damgasız · Mint"
+  // Already set — if both mint and damga detected above, combine them
+  if (durum && !/damgal|damgas/.test(durum)) {
+    // Only mint info, add damga status if found
+    const isDamgali = /damgal[ıi]|cancel|used|kullan[ıi]lm[ıi]ş|postally/.test(scanText);
+    const isDamgasiz = /damgas[ıi]z|uncancel|unused|kullan[ıi]lmam[ıi]ş/.test(scanText);
+    if (isDamgali) durum = 'Damgalı · ' + durum;
+    else if (isDamgasiz) durum = 'Damgasız · ' + durum;
+  } else if (!durum) {
+    // Neither found — try to set just damga status
+    const isDamgali = /damgal[ıi]|cancel|used|kullan[ıi]lm[ıi]ş|postally/.test(scanText);
+    const isDamgasiz = /damgas[ıi]z|uncancel|unused|kullan[ıi]lmam[ıi]ş/.test(scanText);
+    if (isDamgali) durum = 'Damgalı';
+    else if (isDamgasiz) durum = 'Damgasız';
+  }
+
   return {
     title, subtitle, image, code, country, year,
     denomination: nominalDeger, typeInfo: pulTipi,
     katalogNo: code, ulke: country, basimYili: year, basimYeri,
-    nominalDeger, pulTipi, ozet
+    nominalDeger, pulTipi, ozet, durum
   };
 }
 // ─── PLAK (VINYL) EXTRACTOR ────────────────────────────────────────────────
@@ -1019,6 +1083,7 @@ async function getFileFromCache(file) {
       file._nominalDeger = cached._nominalDeger;
       file._pulTipi = cached._pulTipi;
       file._ozet = cached._ozet;
+      file._durum = cached._durum;
       file._artist = cached._artist;
       file._album = cached._album;
       file._plakSirketi = cached._plakSirketi;
@@ -1058,6 +1123,7 @@ async function saveFileToCache(file) {
       _nominalDeger: file._nominalDeger,
       _pulTipi: file._pulTipi,
       _ozet: file._ozet,
+      _durum: file._durum,
       _artist: file._artist,
       _album: file._album,
       _plakSirketi: file._plakSirketi,
@@ -1192,6 +1258,7 @@ file._nominal = extracted.denomination;
         file._nominalDeger = extracted.nominalDeger;
         file._pulTipi = extracted.pulTipi;
         file._ozet = extracted.ozet;
+        file._durum = extracted.durum;
         file._htmlContent = html;
 
         // Plak-specific extraction
@@ -1229,7 +1296,7 @@ file._nominal = extracted.denomination;
 }
 
 function updateCardUI(item) {
-  const { file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, isDiecast, brandEl, yearEl, badgeBrandEl, badgeYearEl, badgeCodeEl, h3El, koleksiyonEl, ulkeEl, yilEl, nominalEl, tipiEl, galleryId } = item;
+  const { file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, isDiecast, brandEl, yearEl, badgeBrandEl, badgeYearEl, badgeCodeEl, h3El, koleksiyonEl, ulkeEl, yilEl, nominalEl, tipiEl, durumEl, galleryId } = item;
 
   // Standard PDF card updates
   if (titleEl) titleEl.textContent = file._title;
@@ -1307,6 +1374,10 @@ function updateCardUI(item) {
     if (tipiEl) {
       const valEl = tipiEl.querySelector('.pdf-card-field__value');
       if (valEl) valEl.textContent = tipiValue || '—';
+    }
+    if (durumEl) {
+      const valEl = durumEl.querySelector('.pdf-card-field__value');
+      if (valEl) valEl.textContent = file._durum || '—';
     }
   }
 
@@ -1794,6 +1865,10 @@ class GalleryManager {
             <span class="pdf-card-field__label">${L.tipi}</span>
             <span class="pdf-card-field__value">${tipiValue || '—'}</span>
           </div>
+          <div class="pdf-card-field card-durum-el">
+            <span class="pdf-card-field__label">Durum</span>
+            <span class="pdf-card-field__value">${file._durum || '—'}</span>
+          </div>
         </div>
       </div>
       <div class="pdf-card-action">
@@ -1813,11 +1888,12 @@ class GalleryManager {
     const yilEl = card.querySelector('.card-yil-el');
     const nominalEl = card.querySelector('.card-nominal-el');
     const tipiEl = card.querySelector('.card-tipi-el');
+    const durumEl = card.querySelector('.card-durum-el');
 
     if (!file.isMock && (!file._title || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim()) {
         console.log(`[PULLUK] createPdfCard: pushing ${file.name} to previewQueue`);
-        previewQueue.push({ file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, gallery: this, koleksiyonEl, ulkeEl, yilEl, nominalEl, tipiEl, galleryId });
+        previewQueue.push({ file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, gallery: this, koleksiyonEl, ulkeEl, yilEl, nominalEl, tipiEl, durumEl, galleryId });
         processPreviewQueue();
       }
     }
