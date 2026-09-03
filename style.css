@@ -578,8 +578,8 @@ html[data-theme="dark"] .pdf-card:hover .pdf-name {
   margin-top: 2px;
   margin-left: -2px;
 }
-.card-tipi-el { grid-column: span 2; }
-.card-durum-el { grid-column: span 2; }
+.card-tipi-el { grid-column: span 1; }
+.card-durum-el { grid-column: span 1; }
 .card-durum-el .pdf-card-field__value {
   font-weight: 600;
   color: var(--azure);

@@ -418,6 +418,45 @@ function extractStampInfoFromHtml(html) {
   const allText = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
   const scanText = (bodyText + ' ' + allText).toLowerCase();
 
+  // ── 0. TABLE KEY-VALUE EXTRACTION (broad mapping) ──
+  const tableData = {};
+  const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
+  if (rows) {
+    for (const row of rows) {
+      const thMatches = row.match(/<th[^>]*>([\s\S]*?)<\/th>/gi);
+      const tdMatches = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
+      let key = '', val = '';
+      if (thMatches && tdMatches && tdMatches.length >= 1) {
+        key = thMatches[0].replace(/<[^>]+>/g, '').trim();
+        val = tdMatches[0].replace(/<[^>]+>/g, '').trim();
+      } else if (tdMatches && tdMatches.length >= 2) {
+        key = tdMatches[0].replace(/<[^>]+>/g, '').trim();
+        val = tdMatches[1].replace(/<[^>]+>/g, '').trim();
+      }
+      if (key && val) tableData[key.toLowerCase().trim()] = val;
+    }
+  }
+  // Also scan DOM table cells
+  const cells = doc.querySelectorAll('td, th');
+  for (let i = 0; i < cells.length; i++) {
+    const t = cells[i].textContent.trim();
+    const nextTd = cells[i].nextElementSibling;
+    if (nextTd && t.length < 60) {
+      tableData[t.toLowerCase().trim()] = nextTd.textContent.trim();
+    }
+  }
+
+  // Generic table field resolver
+  const findTableValue = (...keys) => {
+    for (const k of keys) {
+      const low = k.toLowerCase();
+      for (const tk of Object.keys(tableData)) {
+        if (tk.includes(low) || low.includes(tk)) return tableData[tk];
+      }
+    }
+    return '';
+  };
+
   // ── 1. KODEX (.kod element, then .collection-number, then <title>) ──
   const kodEl = doc.querySelector('.kod');
   if (kodEl) {
@@ -498,6 +537,15 @@ function extractStampInfoFromHtml(html) {
     const cm = subtitle.match(currencyPattern);
     if (cm) nominalDeger = cm[0].trim();
   }
+  // Try from table data
+  if (!nominalDeger) {
+    const tableNominal = findTableValue('nominal', 'değer', 'deger', 'value', 'bedel', 'kiymet', 'fiyat', 'tutar', 'birim', 'denomination', 'face value');
+    if (tableNominal) {
+      const cm = tableNominal.match(currencyPattern);
+      if (cm) nominalDeger = cm[0].trim();
+      else if (tableNominal.length < 40) nominalDeger = tableNominal.trim();
+    }
+  }
   // Try from <td>/<th> elements (table cells if they exist)
   if (!nominalDeger) {
     const cells = doc.querySelectorAll('td, th');
@@ -528,6 +576,11 @@ function extractStampInfoFromHtml(html) {
   // ── 6. ÜLKE: extract from text using known country keywords ──
   const countryInfo = STAMP_COUNTRIES.find(c => c.keywords.some(kw => scanText.includes(kw)));
   if (countryInfo) country = countryInfo.name;
+  // Fallback: table data
+  if (!country) {
+    const tableCountry = findTableValue('ülke', 'ulke', 'country', 'menşe', 'mense', 'menşei', 'origin', 'devlet', 'state');
+    if (tableCountry) country = extractCountryFromText(tableCountry) || tableCountry;
+  }
   // Fallback: scan all table cells for country names
   if (!country) {
     const cells = doc.querySelectorAll('td, th');
@@ -541,12 +594,23 @@ function extractStampInfoFromHtml(html) {
   }
 
   // ── 7. BASIM YILI: extract from text ──
-  const yearMatch = scanText.match(/\b((?:18|19|20)\d{2})\b/);
-  if (yearMatch) year = yearMatch[1];
   // Try title first for year (more reliable)
   if (title) {
     const tYear = title.match(/\b((?:18|19|20)\d{2})\b/);
     if (tYear) year = tYear[1];
+  }
+  // Fallback: table data
+  if (!year) {
+    const tableYear = findTableValue('yıl', 'yil', 'year', 'tarih', 'basım yılı', 'basim yili', 'yayın yılı', 'dönem', 'dönem', 'üretim yılı');
+    if (tableYear) {
+      const ym = tableYear.match(/\b((?:18|19|20)\d{2})\b/);
+      if (ym) year = ym[1];
+    }
+  }
+  // Fallback: scan all text
+  if (!year) {
+    const yearMatch = scanText.match(/\b((?:18|19|20)\d{2})\b/);
+    if (yearMatch) year = yearMatch[1];
   }
 
   // ── 8. PUL TİPİ: extract from text ──
@@ -584,6 +648,12 @@ function extractStampInfoFromHtml(html) {
     }
   }
   // Fallback: scan table cells
+  if (!pulTipi) {
+    const tableTip = findTableValue('pul tipi', 'tip', 'type', 'tür', 'tur', 'kategori', 'category');
+    if (tableTip) {
+      pulTipi = tableTip;
+    }
+  }
   if (!pulTipi) {
     const cells = doc.querySelectorAll('td, th');
     for (const cell of cells) {
@@ -658,22 +728,22 @@ function extractStampInfoFromHtml(html) {
   // Her pul tipi kendi adıyla korunuyor (Posta Pulu, Damga Pulu, Vergi Pulu, Harç Pulu, Anma Pulu, vb.)
 
   // ── 9. BASIM YERİ: extract from table cells or text ──
-  // Note: Turkish chars (ı, ş, ğ, ü, ö, ç) break \b word boundary in JS regex,
-  // so we use case-insensitive indexOf checks instead of \b-based patterns.
   const basimYeriKeys = [
     'basım yeri', 'baskı yeri', 'bastığı yer', 'basıldığı yer', 'bas yeri',
     'basım şehri', 'baskı şehri', 'baski yeri', 'basim yeri',
     'place of printing', 'printed in', 'printing place', 'printing city',
     'city of issue', 'issue place', 'place of issue',
-    'yayın yeri', 'yayın yeri', 'yayin yeri', 'yayınevi',
-    'basım bölgesi', 'basım merkezi'
+    'yayın yeri', 'yayin yeri', 'yayınevi',
+    'basım bölgesi', 'basım merkezi', 'şehir', 'yer', 'location'
   ];
-  function isBasimYeriKey(text) {
-    const t = text.toLowerCase().trim();
-    return basimYeriKeys.some(k => t === k || t.startsWith(k + ':') || t.startsWith(k + ' :') || t.includes(k));
-  }
-  // Method 1: Table row-based extraction (most reliable)
-  {
+  // Method 1: Table data via findTableValue (broadest)
+  basimYeri = findTableValue(...basimYeriKeys);
+  // Method 2: isBasimYeriKey check for complex keys
+  if (!basimYeri) {
+    function isBasimYeriKey(text) {
+      const t = text.toLowerCase().trim();
+      return basimYeriKeys.some(k => t === k || t.startsWith(k + ':') || t.startsWith(k + ' :') || t.includes(k));
+    }
     const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
     if (rows) {
       for (const row of rows) {
@@ -694,13 +764,13 @@ function extractStampInfoFromHtml(html) {
       }
     }
   }
-  // Method 2: DOMParser — scan table cells for key-value pairs
+  // Method 3: DOMParser — scan table cells for key-value pairs
   if (!basimYeri) {
     const cells = doc.querySelectorAll('td, th');
     for (let i = 0; i < cells.length; i++) {
       const t = cells[i].textContent.trim();
-      if (isBasimYeriKey(t)) {
-        // Get next sibling cell in same row
+      const tLow = t.toLowerCase().trim();
+      if (basimYeriKeys.some(k => tLow.includes(k))) {
         const nextTd = cells[i].nextElementSibling;
         if (nextTd) {
           basimYeri = nextTd.textContent.trim();
@@ -709,7 +779,7 @@ function extractStampInfoFromHtml(html) {
       }
     }
   }
-  // Method 3: key:value pattern in all text
+  // Method 4: key:value pattern in all text
   if (!basimYeri) {
     for (const key of basimYeriKeys) {
       const regex = new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[:\s]+([a-zA-ZçğıöşüÇĞİÖŞÜ\\s.,-]{2,60})', 'i');
@@ -717,7 +787,7 @@ function extractStampInfoFromHtml(html) {
       if (cm) { basimYeri = cm[1].trim(); break; }
     }
   }
-  // Method 4: scan all visible text for standalone place names after known labels
+  // Method 5: scan all visible text for standalone place names after known labels
   if (!basimYeri) {
     const bodyTextClean = (doc.body ? doc.body.textContent || '' : '').replace(/\s+/g, ' ');
     for (const key of basimYeriKeys) {
@@ -754,24 +824,17 @@ function extractStampInfoFromHtml(html) {
   }
 
   // ── 11. DURUM: damgalı/damgasız + mint/MNH/MLH ──
-  // Table-based extraction
-  {
-    const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
-    if (rows) {
-      for (const row of rows) {
-        const thMatches = row.match(/<th[^>]*>([\s\S]*?)<\/th>/gi);
-        const tdMatches = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
-        let key = '', val = '';
-        if (thMatches && tdMatches && tdMatches.length >= 1) {
-          key = thMatches[0].replace(/<[^>]+>/g, '').trim();
-          val = tdMatches[0].replace(/<[^>]+>/g, '').trim();
-        } else if (tdMatches && tdMatches.length >= 2) {
-          key = tdMatches[0].replace(/<[^>]+>/g, '').trim();
-          val = tdMatches[1].replace(/<[^>]+>/g, '').trim();
-        }
-        const keyLower = key.toLowerCase();
-        if (/durum|condition|status|kalite|nitelik|stam?ped|cancel|mint|mnh|mlh|used|kullan[ıi]/i.test(keyLower) && val) {
-          durum = val;
+  // Table-based extraction via findTableValue
+  durum = findTableValue('durum', 'condition', 'status', 'kalite', 'nitelik', 'stamped', 'cancel', 'mint', 'mnh', 'mlh', 'used', 'kullanılmış', 'damga durumu');
+  // Fallback: direct table row scan
+  if (!durum) {
+    const cells = doc.querySelectorAll('td, th');
+    for (const cell of cells) {
+      const t = cell.textContent.trim().toLowerCase();
+      if (/durum|condition|status|kalite|nitelik|stam?ped|cancel|mint|mnh|mlh|used|kullan[ıi]/.test(t)) {
+        const nextTd = cell.nextElementSibling;
+        if (nextTd && nextTd.textContent.trim()) {
+          durum = nextTd.textContent.trim();
           break;
         }
       }
