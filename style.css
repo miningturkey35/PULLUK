@@ -580,13 +580,6 @@ html[data-theme="dark"] .pdf-card:hover .pdf-name {
 }
 .card-tipi-el { grid-column: span 1; }
 .card-durum-el { grid-column: span 1; }
-.card-durum-el .pdf-card-field__value {
-  font-weight: 600;
-  color: var(--azure);
-}
-html[data-theme="dark"] .card-durum-el .pdf-card-field__value {
-  color: var(--gold);
-}
 .pdf-card-field {
   display: flex;
   flex-direction: column;

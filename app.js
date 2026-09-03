@@ -1093,7 +1093,7 @@ function extractPlakInfoFromHtml(html) {
   return { title, subtitle, image, code, artist, album, plakSirketi, katalogNo, year, format, country, genre, pressing, matrixNo, condition };
 }
 const DB_NAME = 'PullukDB';
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 const STORE_NAME = 'fileCache';
 
 function initDB() {
@@ -1223,13 +1223,22 @@ async function processPreviewQueue() {
       const apiKey = CONFIG.GOOGLE_API_KEY.trim();
 
       if (file._title) {
-        // Re-extract basimYeri from cached htmlContent if missing
-        if (!file._basimYeri && file._htmlContent) {
+        // Re-extract missing fields from cached htmlContent
+        if (file._htmlContent) {
           const reExtracted = extractStampInfoFromHtml(file._htmlContent);
-          if (reExtracted.basimYeri) {
-            file._basimYeri = reExtracted.basimYeri;
-            saveFileToCache(file);
-          }
+          let changed = false;
+          if (!file._basimYeri && reExtracted.basimYeri) { file._basimYeri = reExtracted.basimYeri; changed = true; }
+          if (!file._country && reExtracted.country) { file._country = reExtracted.country; changed = true; }
+          if (!file._year && reExtracted.year) { file._year = reExtracted.year; changed = true; }
+          if (!file._nominalDeger && reExtracted.nominalDeger) { file._nominalDeger = reExtracted.nominalDeger; changed = true; }
+          if (!file._pulTipi && reExtracted.pulTipi) { file._pulTipi = reExtracted.pulTipi; changed = true; }
+          if (!file._durum && reExtracted.durum) { file._durum = reExtracted.durum; changed = true; }
+          if (!file._image && reExtracted.image) { file._image = reExtracted.image; changed = true; }
+          if (!file._code && reExtracted.code) { file._code = reExtracted.code; changed = true; }
+          if (!file._ulke && reExtracted.ulke) { file._ulke = reExtracted.ulke; changed = true; }
+          if (!file._basimYili && reExtracted.basimYili) { file._basimYili = reExtracted.basimYili; changed = true; }
+          if (!file._subtitle && reExtracted.subtitle) { file._subtitle = reExtracted.subtitle; changed = true; }
+          if (changed) saveFileToCache(file);
         }
         // Plak-specific: extract from html if not yet done
         if (gallery && gallery.id === 'plak' && !file._artist && file._htmlContent) {
@@ -1253,13 +1262,22 @@ async function processPreviewQueue() {
       }
 
       if (!file._title && await getFileFromCache(file)) {
-        // Re-extract basimYeri from cached htmlContent if missing
-        if (!file._basimYeri && file._htmlContent) {
+        // Re-extract missing fields from cached htmlContent
+        if (file._htmlContent) {
           const reExtracted = extractStampInfoFromHtml(file._htmlContent);
-          if (reExtracted.basimYeri) {
-            file._basimYeri = reExtracted.basimYeri;
-            saveFileToCache(file);
-          }
+          let changed = false;
+          if (!file._basimYeri && reExtracted.basimYeri) { file._basimYeri = reExtracted.basimYeri; changed = true; }
+          if (!file._country && reExtracted.country) { file._country = reExtracted.country; changed = true; }
+          if (!file._year && reExtracted.year) { file._year = reExtracted.year; changed = true; }
+          if (!file._nominalDeger && reExtracted.nominalDeger) { file._nominalDeger = reExtracted.nominalDeger; changed = true; }
+          if (!file._pulTipi && reExtracted.pulTipi) { file._pulTipi = reExtracted.pulTipi; changed = true; }
+          if (!file._durum && reExtracted.durum) { file._durum = reExtracted.durum; changed = true; }
+          if (!file._image && reExtracted.image) { file._image = reExtracted.image; changed = true; }
+          if (!file._code && reExtracted.code) { file._code = reExtracted.code; changed = true; }
+          if (!file._ulke && reExtracted.ulke) { file._ulke = reExtracted.ulke; changed = true; }
+          if (!file._basimYili && reExtracted.basimYili) { file._basimYili = reExtracted.basimYili; changed = true; }
+          if (!file._subtitle && reExtracted.subtitle) { file._subtitle = reExtracted.subtitle; changed = true; }
+          if (changed) saveFileToCache(file);
         }
         // Plak-specific: extract from cached html if not yet done
         if (gallery && gallery.id === 'plak' && !file._artist && file._htmlContent) {
