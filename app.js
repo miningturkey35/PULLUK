@@ -12,6 +12,7 @@ const CONFIG = {
     'galeri': '11AeW1GWpmhOk28Xt-AD65e6eH12Bk4t8', // Pul Arşivi
     'diecast': '1SDvXKhh92xPO1Jd-wZccqDdxGy8Ghygg', // Diecast Koleksiyonu (Klasör ID'si eklenecek)
     'plak': '13FPeN7gTD3SjbUB6ENIfaJ4OVa6rYqd0', // Plak Arşivi (Klasör ID'si eklenecek)
+    'banknot': '1ffJ9xKTsrKpaM3OcJ0fRU4ggcRRmKBdL', // Banknot Koleksiyonu
     'allother': '1mmPvVEreFr0cbXjX3Ds21FOsZI9cRaH0' // Daha Ne Varsa (ALLOTHER)
   },
 
@@ -2747,6 +2748,7 @@ async function init() {
     new GalleryManager('galeri', CONFIG.FOLDERS['galeri']),
     new GalleryManager('diecast', CONFIG.FOLDERS['diecast']),
     new GalleryManager('plak', CONFIG.FOLDERS['plak']),
+    new GalleryManager('banknot', CONFIG.FOLDERS['banknot']),
     new GalleryManager('allother', CONFIG.FOLDERS['allother'])
   ];
 
