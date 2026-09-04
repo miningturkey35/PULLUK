@@ -202,7 +202,7 @@ html[data-theme="dark"] .icon-sun { display: none; }
 
 /* ---------- Hero ---------- */
 .hero {
-  position: relative; padding-block: clamp(72px,10vw,120px) clamp(56px,8vw,96px);
+  position: relative; padding-block: clamp(40px,6vw,72px) clamp(32px,5vw,56px);
   overflow: hidden;
 }
 .hero-blob {
@@ -378,6 +378,7 @@ html[data-theme="dark"] .hero-badge {
 .stripe-coral { background: linear-gradient(90deg, var(--coral), #FF8571); }
 .stripe-purple { background: linear-gradient(90deg, #A855F7, #C084FC); }
 .stripe-green { background: linear-gradient(90deg, #22C55E, #4ADE80); }
+.stripe-emerald { background: linear-gradient(90deg, #10B981, #34D399); }
 
 .card-body { padding: 14px 18px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .card-icon { display: none; }
