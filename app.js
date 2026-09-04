@@ -2846,12 +2846,15 @@ function initPreviewCarousel() {
   if (allUrls.length === 0) return;
 
   const imgs = carousel.querySelectorAll('.preview-image');
-  const gridCount = imgs.length; // 6
+  const gridCount = imgs.length; // 9
 
-  // Pick gridCount unique shuffled URLs
+  // Pick gridCount unique shuffled URLs (cycle if more slots than sources)
   let shuffled = [...allUrls].sort(() => Math.random() - 0.5);
+  while (shuffled.length < gridCount) shuffled.push(...shuffled.slice(0, gridCount - shuffled.length));
   const usedUrls = shuffled.slice(0, gridCount);
-  const hiddenUrls = shuffled.slice(gridCount); // remaining unused URLs
+  // Build hidden pool: sources NOT currently visible (for click-swap)
+  const visibleSet = new Set(usedUrls);
+  let hiddenUrls = allUrls.filter(u => !visibleSet.has(u));
 
   imgs.forEach((imgEl, i) => {
     imgEl.src = usedUrls[i];
