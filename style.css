@@ -313,7 +313,7 @@ html[data-theme="dark"] .hero-badge {
   padding: 4px;
 }
 .preview-image {
-  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  width: 100%; aspect-ratio: 1/1; object-fit: cover;
   transition: opacity .5s ease-in-out;
   border-radius: var(--radius-sm);
   cursor: pointer;

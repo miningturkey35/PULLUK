@@ -2851,21 +2851,29 @@ async function initPreviewCarousel() {
   if (previewFolderId && apiKey) {
     try {
       const params = new URLSearchParams({
-        q: `'${previewFolderId}' in parents and trashed=false and mimeType contains 'image/'`,
+        q: `'${previewFolderId}' in parents and trashed=false and (mimeType contains 'image/')`,
         fields: 'files(id,name,mimeType)',
         pageSize: 100,
         key: apiKey,
         orderBy: 'name',
       });
       const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`);
+      console.log(`[PULLUK] preview: Drive API status ${res.status}`);
       if (res.ok) {
         const data = await res.json();
-        allUrls = (data.files || []).map(f => `https://drive.google.com/uc?export=view&id=${f.id}`);
-        console.log(`[PULLUK] preview: fetched ${allUrls.length} images from Drive`);
+        const files = data.files || [];
+        console.log(`[PULLUK] preview: found ${files.length} files`, files.map(f => f.name));
+        // Use lh3.googleusercontent.com for reliable public image loading
+        allUrls = files.map(f => `https://lh3.googleusercontent.com/d/${f.id}`);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.warn('[PULLUK] preview: Drive API error', res.status, err);
       }
     } catch (err) {
       console.warn('[PULLUK] preview: Drive fetch failed, falling back to HTML list', err);
     }
+  } else {
+    console.log('[PULLUK] preview: no Drive folder or API key, using hardcoded list');
   }
 
   // Strategy 2: Fallback to hardcoded HTML list
