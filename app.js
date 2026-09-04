@@ -2839,28 +2839,45 @@ function initPreviewCarousel() {
   const carousel = document.getElementById('previewCarousel');
   if (!list || !carousel) return;
 
-  const urls = Array.from(list.querySelectorAll('a'))
+  const allUrls = Array.from(list.querySelectorAll('a'))
     .map(a => a.getAttribute('href'))
     .filter(Boolean);
 
-  if (urls.length === 0) return;
+  if (allUrls.length === 0) return;
 
-  // Get all 9 img elements in the grid
   const imgs = carousel.querySelectorAll('.preview-image');
+  const gridCount = imgs.length; // 6
 
-  // Populate 9 slots: cycle through available URLs
-  const shuffled = [...urls].sort(() => Math.random() - 0.5);
+  // Pick gridCount unique shuffled URLs
+  let shuffled = [...allUrls].sort(() => Math.random() - 0.5);
+  const usedUrls = shuffled.slice(0, gridCount);
+  const hiddenUrls = shuffled.slice(gridCount); // remaining unused URLs
+
   imgs.forEach((imgEl, i) => {
-    imgEl.src = shuffled[i % shuffled.length];
+    imgEl.src = usedUrls[i];
   });
 
-  // Periodically rotate one random slot
-  setInterval(() => {
-    const slot = Math.floor(Math.random() * imgs.length);
-    const newUrl = urls[Math.floor(Math.random() * urls.length)];
-    imgs[slot].style.opacity = '0';
-    setTimeout(() => { imgs[slot].src = newUrl; imgs[slot].style.opacity = '1'; }, 250);
-  }, 4000);
+  // Click handler: swap clicked image with one from hidden pool
+  imgs.forEach((imgEl) => {
+    imgEl.addEventListener('click', () => {
+      if (hiddenUrls.length === 0) {
+        // Rebuild pool from all URLs excluding currently visible
+        const visibleSet = new Set(Array.from(imgs).map(e => e.src));
+        hiddenUrls.push(...allUrls.filter(u => !visibleSet.has(u)));
+        // If still nothing (all visible == all available), reshuffle
+        if (hiddenUrls.length === 0) hiddenUrls.push(...allUrls);
+      }
+      const newIdx = Math.floor(Math.random() * hiddenUrls.length);
+      const newUrl = hiddenUrls.splice(newIdx, 1)[0];
+
+      // Add old src back to hidden pool
+      hiddenUrls.push(imgEl.src);
+
+      // Fade transition
+      imgEl.style.opacity = '0';
+      setTimeout(() => { imgEl.src = newUrl; imgEl.style.opacity = '1'; }, 250);
+    });
+  });
 }
 
 // ─── MAIN INIT ─────────────────────────────────────────────────────────────
