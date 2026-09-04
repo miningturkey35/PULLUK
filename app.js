@@ -13,7 +13,8 @@ const CONFIG = {
     'diecast': '1SDvXKhh92xPO1Jd-wZccqDdxGy8Ghygg', // Diecast Koleksiyonu (Klasör ID'si eklenecek)
     'plak': '13FPeN7gTD3SjbUB6ENIfaJ4OVa6rYqd0', // Plak Arşivi (Klasör ID'si eklenecek)
     'banknot': '1ffJ9xKTsrKpaM3OcJ0fRU4ggcRRmKBdL', // Banknot Koleksiyonu
-    'allother': '1mmPvVEreFr0cbXjX3Ds21FOsZI9cRaH0' // Daha Ne Varsa (ALLOTHER)
+    'allother': '1mmPvVEreFr0cbXjX3Ds21FOsZI9cRaH0', // Daha Ne Varsa (ALLOTHER)
+    'preview': '1cyZ7qFqvoTA39E0jWSK2LuueK7l0Da-W' // Önizleme görselleri
   },
 
   // Paste your Google Cloud API Key here to enable live Drive integration.
@@ -2834,25 +2835,53 @@ function initBackToTop() {
 }
 
 // ─── PREVIEW CAROUSEL ─────────────────────────────────────────────────────
-function initPreviewCarousel() {
+async function initPreviewCarousel() {
   const list = document.querySelector('.preview-images-list');
   const carousel = document.getElementById('previewCarousel');
   if (!list || !carousel) return;
 
-  const allUrls = Array.from(list.querySelectorAll('a'))
-    .map(a => a.getAttribute('href'))
-    .filter(Boolean);
+  const imgs = carousel.querySelectorAll('.preview-image');
+  const gridCount = imgs.length;
+
+  // Strategy 1: Fetch images from Drive PREVIEW folder
+  let allUrls = [];
+  const previewFolderId = CONFIG.FOLDERS['preview'];
+  const apiKey = CONFIG.GOOGLE_API_KEY.trim();
+
+  if (previewFolderId && apiKey) {
+    try {
+      const params = new URLSearchParams({
+        q: `'${previewFolderId}' in parents and trashed=false and mimeType contains 'image/'`,
+        fields: 'files(id,name,mimeType)',
+        pageSize: 100,
+        key: apiKey,
+        orderBy: 'name',
+      });
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        allUrls = (data.files || []).map(f => `https://drive.google.com/uc?export=view&id=${f.id}`);
+        console.log(`[PULLUK] preview: fetched ${allUrls.length} images from Drive`);
+      }
+    } catch (err) {
+      console.warn('[PULLUK] preview: Drive fetch failed, falling back to HTML list', err);
+    }
+  }
+
+  // Strategy 2: Fallback to hardcoded HTML list
+  if (allUrls.length === 0) {
+    allUrls = Array.from(list.querySelectorAll('a'))
+      .map(a => a.getAttribute('href'))
+      .filter(Boolean);
+    console.log(`[PULLUK] preview: using ${allUrls.length} hardcoded images`);
+  }
 
   if (allUrls.length === 0) return;
-
-  const imgs = carousel.querySelectorAll('.preview-image');
-  const gridCount = imgs.length; // 9
 
   // Pick gridCount unique shuffled URLs (cycle if more slots than sources)
   let shuffled = [...allUrls].sort(() => Math.random() - 0.5);
   while (shuffled.length < gridCount) shuffled.push(...shuffled.slice(0, gridCount - shuffled.length));
   const usedUrls = shuffled.slice(0, gridCount);
-  // Build hidden pool: sources NOT currently visible (for click-swap)
   const visibleSet = new Set(usedUrls);
   let hiddenUrls = allUrls.filter(u => !visibleSet.has(u));
 
@@ -2864,19 +2893,13 @@ function initPreviewCarousel() {
   imgs.forEach((imgEl) => {
     imgEl.addEventListener('click', () => {
       if (hiddenUrls.length === 0) {
-        // Rebuild pool from all URLs excluding currently visible
-        const visibleSet = new Set(Array.from(imgs).map(e => e.getAttribute('src')));
-        hiddenUrls.push(...allUrls.filter(u => !visibleSet.has(u)));
-        // If still nothing (all visible == all available), reshuffle
+        const currentSet = new Set(Array.from(imgs).map(e => e.getAttribute('src')));
+        hiddenUrls.push(...allUrls.filter(u => !currentSet.has(u)));
         if (hiddenUrls.length === 0) hiddenUrls.push(...allUrls);
       }
       const newIdx = Math.floor(Math.random() * hiddenUrls.length);
       const newUrl = hiddenUrls.splice(newIdx, 1)[0];
-
-      // Add old src back to hidden pool
       hiddenUrls.push(imgEl.getAttribute('src'));
-
-      // Fade transition
       imgEl.style.opacity = '0';
       setTimeout(() => { imgEl.src = newUrl; imgEl.style.opacity = '1'; }, 250);
     });
@@ -2885,7 +2908,7 @@ function initPreviewCarousel() {
 
 // ─── MAIN INIT ─────────────────────────────────────────────────────────────
 async function init() {
-  initPreviewCarousel();
+  await initPreviewCarousel();
   initTheme();
   initViewer();
   initMobileNav();
