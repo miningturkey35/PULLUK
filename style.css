@@ -944,10 +944,12 @@ html[data-theme="dark"] .plak-card:hover {
 }
 
 .plak-icon-frame {
-  width: 160px !important;
-  height: 160px !important;
-  border-radius: 12px !important;
-  background: linear-gradient(135deg, var(--gold-light), var(--coral-light)) !important;
+  width: 160px;
+  height: 160px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--gold-light), var(--coral-light));
+  flex: none;
+  overflow: hidden;
 }
 
 .plak-card-info {
@@ -1042,11 +1044,14 @@ html[data-theme="dark"] .plak-field-artist .pdf-card-field__label {
 }
 
 @media (max-width: 560px) {
-  .plak-card { min-width: 0; }
-  .plak-icon-frame { width: 100px !important; height: 100px !important; }
-  .plak-card-info { grid-template-columns: 1fr !important; }
+  .plak-card { min-width: 0; flex-direction: column; align-items: flex-start; }
+  .plak-icon-frame { width: 100%; height: auto; aspect-ratio: 1/1; border-radius: 10px; }
+  .plak-card-info { grid-template-columns: 1fr !important; width: 100%; }
   .plak-field-title { grid-column: 1; }
   .plak-field-collection { grid-column: 1; }
+}
+@media (max-width: 400px) {
+  .plak-card { padding: 10px; }
 }
 
 /* ─── PDF Card Color Variations ─── */
