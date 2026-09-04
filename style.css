@@ -113,7 +113,7 @@ button { font: inherit; cursor: pointer; }
 
 /* ---------- Typography ---------- */
 h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; letter-spacing: -.02em; margin: 0; color: var(--ink); overflow-wrap: break-word; word-break: break-word; }
-h1 { font-size: clamp(2.4rem,4.5vw+1rem,4.4rem); line-height: 1.04; }
+h1 { font-size: clamp(2.8rem,5vw+1rem,5rem); line-height: 1.1; }
 h2 { font-size: clamp(1.9rem,2.8vw+1rem,2.9rem); line-height: 1.08; }
 h3 { font-size: clamp(1.2rem,1vw+1rem,1.5rem); line-height: 1.25; }
 p { margin: 0; color: var(--ink-soft); }
@@ -161,7 +161,7 @@ header.site-nav {
 
 .brand { display: flex; align-items: center; gap: 14px; }
 .brand-mark {
-  width: 44px; height: 44px; border-radius: 14px;
+  width: 52px; height: 52px; border-radius: 14px;
   object-fit: cover;
   display: block;
   transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s ease;
