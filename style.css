@@ -299,14 +299,18 @@ html[data-theme="dark"] .hero-badge {
 .preview-carousel-container { position: relative; width: 100%; margin-top: 8px; }
 .preview-images-list { display: none; }
 .preview-carousel {
-  width: 100%; aspect-ratio: 4/3; border-radius: var(--radius-md);
+  width: 100%; border-radius: var(--radius-md);
   overflow: hidden; background: var(--bg-alt, #f0f2f5);
+}
+.preview-carousel:not(.preview-grid) {
+  aspect-ratio: 4/3;
   display: flex; align-items: center; justify-content: center;
 }
 .preview-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(2, 1fr);
+  aspect-ratio: 3/2;
   gap: 4px;
   padding: 4px;
 }

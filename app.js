@@ -2862,7 +2862,7 @@ function initPreviewCarousel() {
     imgEl.addEventListener('click', () => {
       if (hiddenUrls.length === 0) {
         // Rebuild pool from all URLs excluding currently visible
-        const visibleSet = new Set(Array.from(imgs).map(e => e.src));
+        const visibleSet = new Set(Array.from(imgs).map(e => e.getAttribute('src')));
         hiddenUrls.push(...allUrls.filter(u => !visibleSet.has(u)));
         // If still nothing (all visible == all available), reshuffle
         if (hiddenUrls.length === 0) hiddenUrls.push(...allUrls);
@@ -2871,7 +2871,7 @@ function initPreviewCarousel() {
       const newUrl = hiddenUrls.splice(newIdx, 1)[0];
 
       // Add old src back to hidden pool
-      hiddenUrls.push(imgEl.src);
+      hiddenUrls.push(imgEl.getAttribute('src'));
 
       // Fade transition
       imgEl.style.opacity = '0';
