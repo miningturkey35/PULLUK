@@ -2900,18 +2900,28 @@ async function initPreviewCarousel() {
   // Click handler: swap clicked image with one from hidden pool
   imgs.forEach((imgEl) => {
     imgEl.addEventListener('click', () => {
-      if (hiddenUrls.length === 0) {
-        const currentSet = new Set(Array.from(imgs).map(e => e.getAttribute('src')));
-        hiddenUrls.push(...allUrls.filter(u => !currentSet.has(u)));
-        if (hiddenUrls.length === 0) hiddenUrls.push(...allUrls);
-      }
-      const newIdx = Math.floor(Math.random() * hiddenUrls.length);
-      const newUrl = hiddenUrls.splice(newIdx, 1)[0];
-      hiddenUrls.push(imgEl.getAttribute('src'));
-      imgEl.style.opacity = '0';
-      setTimeout(() => { imgEl.src = newUrl; imgEl.style.opacity = '1'; }, 250);
+      swapImage(imgEl);
     });
   });
+
+  // Auto-rotate: swap one random image every 5 seconds
+  setInterval(() => {
+    const slot = Math.floor(Math.random() * imgs.length);
+    swapImage(imgs[slot]);
+  }, 5000);
+
+  function swapImage(imgEl) {
+    if (hiddenUrls.length === 0) {
+      const currentSet = new Set(Array.from(imgs).map(e => e.getAttribute('src')));
+      hiddenUrls.push(...allUrls.filter(u => !currentSet.has(u)));
+      if (hiddenUrls.length === 0) hiddenUrls.push(...allUrls);
+    }
+    const newIdx = Math.floor(Math.random() * hiddenUrls.length);
+    const newUrl = hiddenUrls.splice(newIdx, 1)[0];
+    hiddenUrls.push(imgEl.getAttribute('src'));
+    imgEl.style.opacity = '0';
+    setTimeout(() => { imgEl.src = newUrl; imgEl.style.opacity = '1'; }, 250);
+  }
 }
 
 // ─── MAIN INIT ─────────────────────────────────────────────────────────────
