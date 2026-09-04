@@ -1027,12 +1027,18 @@ html[data-theme="dark"] .plak-field-format .pdf-card-field__value {
   color: var(--gold);
 }
 
-/* Artist label highlight */
+/* Plak card labels: consistent color, artist = gold */
+.plak-card .pdf-card-field__label {
+  color: var(--ink-faint);
+}
+html[data-theme="dark"] .plak-card .pdf-card-field__label {
+  color: rgba(255,255,255,.4);
+}
 .plak-field-artist .pdf-card-field__label {
-  color: var(--gold);
+  color: var(--gold) !important;
 }
 html[data-theme="dark"] .plak-field-artist .pdf-card-field__label {
-  color: var(--gold);
+  color: var(--gold) !important;
 }
 
 @media (max-width: 560px) {
