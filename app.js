@@ -1755,7 +1755,8 @@ class GalleryManager {
     this.allFiles = [];
     this.filteredFiles = [];
     this.currentPage = 1;
-    this.pageSize = (this.id === 'diecast') ? 6 : CONFIG.PAGE_SIZE;
+    const pageSizes = { galeri: 6, diecast: 3, plak: 3, banknot: 6, allother: 6 };
+    this.pageSize = pageSizes[this.id] || CONFIG.PAGE_SIZE;
     this.currentFilter = 'all';
     this.searchQuery = '';
 
