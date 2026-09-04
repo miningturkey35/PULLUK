@@ -1,5 +1,5 @@
 /* =============================================
-   PULLUK — app.js
+   SEYR-İ DEVRAN — app.js
    Google Drive API integration, theme, search,
    filtering, scroll reveal, mobile menu
    ============================================= */
@@ -134,6 +134,19 @@ function extractCountryFromText(text) {
   }
   return '';
 }
+// Turkish-safe uppercase: i→I, ı→I, ğ→Ğ, ü→Ü, ş→Ş, ö→Ö, ç→Ç
+function toEnUpper(str) {
+  if (!str) return '';
+  return String(str).replace(/i/g, 'I').replace(/ğ/g, 'Ğ').replace(/ü/g, 'Ü').replace(/ş/g, 'Ş').replace(/ö/g, 'Ö').replace(/ç/g, 'Ç').replace(/ı/g, 'I').toUpperCase();
+}
+
+// Extract year from any field value or text
+function extractYearFromText(text) {
+  if (!text) return '';
+  const match = String(text).match(/\b(18|19|20)\d{2}\b/);
+  return match ? match[0] : '';
+}
+
 const DIECAST_BRANDS = [
   'MATCHBOX', 'HOT WHEELS', 'CORGI', 'DINKY', 'MAJORETTE', 'SIKU', 'BURAGO', 'MAISTO',
   'WELLY', 'JADA', 'GREENLIGHT', 'AUTOART', 'KYOSHO', 'MINICHAMPS', 'SPARK', 'IXO',
@@ -141,19 +154,26 @@ const DIECAST_BRANDS = [
   'MAJOR', 'PLAYART', 'HUSKY', 'EFE', 'GAMA', 'MARKLIN', 'WIKING', 'HERPA',
   'BREKINA', 'ROCO', 'LIMA', 'FLEISCHMANN', 'PIKO', 'ARNOLD', 'RIVAROSSI',
   'ATHEARN', 'KATO', 'BACHMANN', 'WALTHERS', 'INTERMOUNTAIN', 'SCALE TRAINS', 'RAPIDO',
-  'REMCO', 'WSI', 'NZG', 'HERO', 'BBR', 'CMR', 'GT SPIRIT', 'LOOK SMART',
-  'TRUE SCALE', 'TSM', 'IGUANAMODEL', 'GREAT WALL', 'LCD', 'HPI', 'CIRCLE G',
-  'JONTOY', 'MAISTO', 'ERTL', 'AMT', 'MONOGRAM', 'REVELL', 'TESTORS'
+  'REMCO', 'GÖZGÖZ', 'MATCHBOX SUPER KINGS', 'POLISTIL', 'WSI', 'NZG', 'HERO', 'BBR',
+  'CMR', 'GT SPIRIT', 'LOOK SMART', 'TRUE SCALE', 'TSM', 'IGUANAMODEL', 'GREAT WALL',
+  'LCD', 'HPI', 'CIRCLE G', 'JONTOY', 'ERTL', 'AMT', 'MONOGRAM', 'REVELL', 'TESTORS'
 ];
-const DIECAST_BRAND_ALIASES = { 'LESNEY': 'MATCHBOX', 'LESNEY PRODUCTS': 'MATCHBOX' };
+
+const DIECAST_BRAND_ALIASES = {
+  'LESNEY': 'MATCHBOX',
+  'LESNEY PRODUCTS': 'MATCHBOX',
+  'MATCHBOX SUPER KINGS': 'MATCHBOX',
+  'GOZGOZ': 'GÖZGÖZ'
+};
 
 function resolveDiecastBrand(rawText) {
   if (!rawText) return '';
-  const upper = toEnUpper(rawText);
+  const upper = toEnUpper(rawText).trim();
   for (const b of DIECAST_BRANDS) {
     if (upper.includes(b)) return DIECAST_BRAND_ALIASES[b] || b;
   }
-  return '';
+  const clean = rawText.split('(')[0].replace(/[-–—]/g, ' ').trim();
+  return clean ? toEnUpper(clean) : '';
 }
 
 // ─── EXTRACT DIECAST DATA FROM HTML TABLE ────────────────────────────────────
@@ -178,16 +198,114 @@ function extractDiecastDataFromHtml(html) {
   return data;
 }
 
-// Extract year from any field value or text
-function extractYearFromText(text) {
-  if (!text) return '';
-  const match = text.match(/\b(19|20)\d{2}\b/);
-  return match ? match[0] : '';
+function detectScale(brand, title) {
+  const scaleMatch = (title || '').match(/\b(1:\d+)\b/);
+  if (scaleMatch) return scaleMatch[1];
+  const brandScales = {
+    'AUTOART': '1:18', 'KYOSHO': '1:18', 'MINICHAMPS': '1:18', 'SPARK': '1:18',
+    'IXO': '1:43', 'NOREV': '1:43', 'SOLIDO': '1:43', 'VANGUARDS': '1:43', 'OXFORD': '1:43',
+    'MATCHBOX': '1:64', 'HOT WHEELS': '1:64', 'CORGI': '1:36', 'DINKY': '1:43',
+    'MAJORETTE': '1:64', 'SIKU': '1:64', 'BURAGO': '1:64', 'MAISTO': '1:64',
+    'WELLY': '1:64', 'JADA': '1:64', 'GREENLIGHT': '1:64', 'RAISE3D': '1:64',
+    'SCHUCO': '1:64', 'TOMY': '1:64', 'TOMICA': '1:64', 'REMCO': '1:64', 'GÖZGÖZ': '1:64'
+  };
+  return brandScales[brand] || '1:64';
 }
 
-// Turkish-safe uppercase: i→I, ı→I, ğ→Ğ, ü→Ü, ş→Ş, ö→Ö, ç→Ç
-function toEnUpper(str) {
-  return str.replace(/i/g, 'I').replace(/ğ/g, 'Ğ').replace(/ü/g, 'Ü').replace(/ş/g, 'Ş').replace(/ö/g, 'Ö').replace(/ç/g, 'Ç').replace(/ı/g, 'I').toUpperCase();
+function detectMaterial(brand, title) {
+  const matMatch = (title || '').match(/\b(resin|diecast|metal|plastic|zinc|white metal)\b/i);
+  if (matMatch) return matMatch[1].charAt(0).toUpperCase() + matMatch[1].slice(1).toLowerCase();
+  const brandMaterials = {
+    'AUTOART': 'Resin', 'KYOSHO': 'Resin', 'MINICHAMPS': 'Resin', 'SPARK': 'Resin',
+    'IXO': 'Resin', 'NOREV': 'Resin', 'SOLIDO': 'Diecast Metal', 'VANGUARDS': 'Diecast Metal', 'OXFORD': 'Diecast Metal',
+    'MATCHBOX': 'Diecast Metal', 'HOT WHEELS': 'Diecast Metal', 'CORGI': 'Diecast Metal', 'DINKY': 'Diecast Metal',
+    'MAJORETTE': 'Diecast Metal', 'SIKU': 'Diecast Metal', 'BURAGO': 'Diecast Metal', 'MAISTO': 'Diecast Metal',
+    'WELLY': 'Diecast Metal', 'JADA': 'Diecast Metal', 'GREENLIGHT': 'Diecast Metal', 'REMCO': 'Diecast Metal', 'GÖZGÖZ': 'Diecast Metal'
+  };
+  return brandMaterials[brand] || 'Diecast Metal';
+}
+
+function parseDiecastInfo(file, html) {
+  const tableData = html ? extractDiecastDataFromHtml(html) : (file?._htmlContent ? extractDiecastDataFromHtml(file._htmlContent) : {});
+
+  // 1. Code
+  const codeMatch = html ? html.match(/class="kod"[^>]*>([\s\S]*?)<\//i) : null;
+  let code = (codeMatch ? codeMatch[1].replace(/<[^>]+>/g, '').trim() : '') ||
+             tableData['Katalog Kodu'] || tableData['Katalog No'] ||
+             file?._code || '';
+  if (!code && file?.name) {
+    const fnm = file.name.match(/^(MG[A-Z0-9]+)/i);
+    if (fnm) code = fnm[1].toUpperCase();
+  }
+
+  // 2. Brand
+  const rawBrand = tableData['Marka / Üretici'] || tableData['Marka / Seri'] || tableData['Marka'] || tableData['Üretici'] || file?._brand || '';
+  let brand = resolveDiecastBrand(rawBrand);
+  if (!brand) {
+    const searchTexts = [file?._title || '', file?.name || '', file?.description || ''].join(' ');
+    for (const b of DIECAST_BRANDS) {
+      if (new RegExp(`\\b${b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')}\\b`, 'i').test(searchTexts)) {
+        brand = b;
+        break;
+      }
+    }
+  }
+  if (!brand) brand = 'DIE-CAST';
+
+  // 3. Model
+  let model = tableData['Araç'] || tableData['Model'] || tableData['Model / Casting'] || tableData['Model Adı'] || tableData['Model Kodu'] || file?._model || '';
+  if (!model && file) {
+    model = file._title || file.name.replace(/\.(html|htm|pdf|jpg|jpeg|png)$/i, '');
+  }
+  model = (model || '')
+    .replace(/MERT\s+GÜVENTÜRK\s+KOLEKSİYONU/gi, '')
+    .replace(/GÜVENTÜRK/gi, '')
+    .replace(/KOLEKSİYON(U)?/gi, '')
+    .replace(/^[-–—|\s]+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!model) model = 'Diecast Model';
+
+  // 4. Scale
+  let scale = tableData['Ölçek (yaklaşık)'] || tableData['Ölçek'] || tableData['Scale'] || file?._scale || '';
+  if (!scale) {
+    const sm = (html || file?.name || '').match(/\b1:\d+\b/);
+    if (sm) scale = sm[0];
+    else scale = detectScale(brand, model) || '1:64';
+  }
+
+  // 5. Year
+  let year = tableData['Üretim Yılı'] || tableData['Dönem'] || tableData['Üretim Yılı (yaklaşık)'] || tableData['Yıl'] || file?._year || '';
+  if (year && year.length > 25) {
+    const ym = year.match(/\b(19|20)\d{2}\b/);
+    if (ym) year = ym[0];
+  }
+  if (!year) {
+    const searchTexts = [file?._title || '', file?.name || '', file?.description || ''].join(' ');
+    year = extractYearFromText(searchTexts);
+  }
+
+  // 6. Origin
+  let origin = tableData['Menşei'] || tableData['Üretim Yeri'] || tableData['Ülke'] || file?._origin || '';
+  origin = origin.replace(/Made in\s*/i, '').replace(/İngiltere\s*\((.*?)\)/i, 'İngiltere').trim();
+  if (!origin) {
+    const originMatch = (file?.name || '').match(/\b(İngiltere|China|Çin|Thailand|Tayland|Hong Kong|Germany|Almanya|France|Fransa|Italy|İtalya|USA|ABD)\b/i);
+    if (originMatch) origin = originMatch[0];
+  }
+
+  // 7. Series
+  let series = tableData['Seri / Numara'] || tableData['Seri'] || tableData['Model No.'] || tableData['Model Kodu'] || tableData['Seri / Tip'] || file?._series || '';
+  if (series.length > 35) series = series.substring(0, 35) + '…';
+
+  // 8. Material
+  let material = tableData['Malzeme'] || tableData['Material'] || tableData['Gövde'] || tableData['Govde'] || file?._material || '';
+  if (!material) {
+    material = detectMaterial(brand, model) || 'Diecast Metal';
+  } else if (/metal|die-cast|diecast/i.test(material)) {
+    material = 'Diecast Metal';
+  }
+
+  return { code, brand, model, scale, year, origin, series, material };
 }
 
 // ─── MOCK DATA ─────────────────────────────────────────────────────────────
@@ -1094,7 +1212,7 @@ function extractPlakInfoFromHtml(html) {
   return { title, subtitle, image, code, artist, album, plakSirketi, katalogNo, year, format, country, genre, pressing, matrixNo, condition };
 }
 const DB_NAME = 'PullukDB';
-const DB_VERSION = 7; // Incremented to clear stale HTML cache
+const DB_VERSION = 8; // Incremented to clear stale HTML cache & support diecast fields
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const STORE_NAME = 'fileCache';
 
@@ -1159,6 +1277,12 @@ async function getFileFromCache(file) {
       file._pressing = cached._pressing;
       file._matrixNo = cached._matrixNo;
       file._condition = cached._condition;
+      file._brand = cached._brand;
+      file._model = cached._model;
+      file._scale = cached._scale;
+      file._origin = cached._origin;
+      file._series = cached._series;
+      file._material = cached._material;
       return true;
     }
   } catch (e) {
@@ -1195,11 +1319,17 @@ async function saveFileToCache(file) {
       _artist: file._artist,
       _album: file._album,
       _plakSirketi: file._plakSirketi,
-_format: file._format,
+      _format: file._format,
       _genre: file._genre,
       _pressing: file._pressing,
       _matrixNo: file._matrixNo,
-      _condition: file._condition
+      _condition: file._condition,
+      _brand: file._brand,
+      _model: file._model,
+      _scale: file._scale,
+      _origin: file._origin,
+      _series: file._series,
+      _material: file._material
     };
     store.put(data);
   } catch (e) {
@@ -1262,6 +1392,20 @@ async function processPreviewQueue() {
           if (plakData.year) file._year = plakData.year;
           saveFileToCache(file);
         }
+        // Diecast-specific: extract from html if not yet done
+        if (gallery && gallery.id === 'diecast' && (!file._brand || !file._scale) && file._htmlContent) {
+          const diecastData = parseDiecastInfo(file, file._htmlContent);
+          file._brand = diecastData.brand;
+          file._model = diecastData.model;
+          file._scale = diecastData.scale;
+          file._year = diecastData.year;
+          file._origin = diecastData.origin;
+          file._series = diecastData.series;
+          file._material = diecastData.material;
+          if (diecastData.code) file._code = diecastData.code;
+          if (diecastData.model) file._title = diecastData.model;
+          saveFileToCache(file);
+        }
         updateCardUI(item);
         return;
       }
@@ -1301,6 +1445,20 @@ async function processPreviewQueue() {
           if (plakData.year) file._year = plakData.year;
           saveFileToCache(file);
         }
+        // Diecast-specific: extract from cached html if not yet done
+        if (gallery && gallery.id === 'diecast' && (!file._brand || !file._scale) && file._htmlContent) {
+          const diecastData = parseDiecastInfo(file, file._htmlContent);
+          file._brand = diecastData.brand;
+          file._model = diecastData.model;
+          file._scale = diecastData.scale;
+          file._year = diecastData.year;
+          file._origin = diecastData.origin;
+          file._series = diecastData.series;
+          file._material = diecastData.material;
+          if (diecastData.code) file._code = diecastData.code;
+          if (diecastData.model) file._title = diecastData.model;
+          saveFileToCache(file);
+        }
         updateCardUI(item);
         if (gallery) gallery.checkAndExtractCategory(file, card);
         return;
@@ -1335,7 +1493,7 @@ async function processPreviewQueue() {
         file._code = extracted.code;
         file._country = extracted.country;
         file._year = extracted.year;
-file._nominal = extracted.denomination;
+        file._nominal = extracted.denomination;
         file._pulTipi = extracted.pulTipi;
         file._katalogNo = extracted.katalogNo;
         file._ulke = extracted.ulke;
@@ -1363,6 +1521,20 @@ file._nominal = extracted.denomination;
           if (plakData.album) file._title = plakData.album;
           if (plakData.katalogNo) file._katalogNo = plakData.katalogNo;
           if (plakData.year) file._year = plakData.year;
+        }
+
+        // Diecast-specific extraction
+        if (gallery && gallery.id === 'diecast') {
+          const diecastData = parseDiecastInfo(file, html);
+          file._brand = diecastData.brand;
+          file._model = diecastData.model;
+          file._scale = diecastData.scale;
+          file._year = diecastData.year;
+          file._origin = diecastData.origin;
+          file._series = diecastData.series;
+          file._material = diecastData.material;
+          if (diecastData.code) file._code = diecastData.code;
+          if (diecastData.model) file._title = diecastData.model;
         }
 
         saveFileToCache(file);
@@ -1467,95 +1639,70 @@ function updateCardUI(item) {
     }
   }
 
-  // Diecast-specific updates: re-parse brand/year/model from extracted HTML data
+  // Diecast-specific updates: re-parse brand/year/model/scale/origin/material/series from extracted HTML data
   if (isDiecast && card) {
-    const tableData = file._htmlContent ? extractDiecastDataFromHtml(file._htmlContent) : {};
+    const diecastData = parseDiecastInfo(file, file._htmlContent);
+    const { brand, model, scale, year, origin, series, material, code } = diecastData;
 
-    // Build brand from table
-    let brand = resolveDiecastBrand(tableData['Marka / Üretici'] || tableData['Marka / Seri'] || tableData['Marka'] || tableData['Üretici'] || '');
-    if (!brand) {
-      const searchTexts = [file._title || '', file._subtitle || '', file.name || '', file.description || ''].join(' ');
-      for (const b of DIECAST_BRANDS) {
-        if (new RegExp(`\\b${b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')}\\b`, 'i').test(searchTexts)) {
-          brand = b;
-          break;
-        }
-      }
-    }
-    // Always display brand as English uppercase (avoid Turkish İ issue)
-    const brandDisplay = DIECAST_BRAND_ALIASES[toEnUpper(brand)] || (brand ? toEnUpper(brand) : 'DIECAST');
-
-    // Build year from table — try multiple Turkish keys
-    let year = '';
-    const yearKeys = ['Yıl', 'Üretim Yılı (yaklaşık)', 'Dönem', 'Üretim Yılı', 'Yapım Yılı', 'Model Yılı'];
-    for (const k of yearKeys) {
-      if (tableData[k]) {
-        year = extractYearFromText(tableData[k]);
-        if (year) break;
-      }
-    }
-    // Fallback: search all table values for a year
-    if (!year) {
-      for (const val of Object.values(tableData)) {
-        year = extractYearFromText(val);
-        if (year) break;
-      }
-    }
-    // Fallback: search text sources
-    if (!year) {
-      const searchTexts = [file._title || '', file._subtitle || '', file.name || '', file.description || ''].join(' ');
-      year = extractYearFromText(searchTexts);
+    // Corner floating badge
+    if (brandEl) brandEl.textContent = brand;
+    const cornerScaleEl = card.querySelector('.diecast-label__scale');
+    if (cornerScaleEl) {
+      if (scale) { cornerScaleEl.textContent = scale; cornerScaleEl.style.display = ''; }
+      else { cornerScaleEl.style.display = 'none'; }
     }
 
-    // Build model from table
-    let model = tableData['Araç'] || tableData['Model / Casting'] || tableData['Model Adı'] || tableData['Model'] || tableData['Model Kodu'] || '';
-    if (!model) model = file._title || '';
-    if (!model) model = file.name.replace(/\.\w+$/, '');
-    model = model
-      .replace(/MERT\s+GÜVENTÜRK\s+KOLEKSİYONU/gi, '')
-      .replace(/GÜVENTÜRK/gi, '')
-      .replace(/KOLEKSİYON(U)?/gi, '')
-      .replace(/[-–—|()\[\]\/]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (!model) model = 'Diecast';
-
-    if (brandEl) brandEl.textContent = brandDisplay;
-    if (badgeBrandEl) badgeBrandEl.textContent = brandDisplay;
-    if (yearEl) {
-      if (year) { yearEl.textContent = year; yearEl.style.display = ''; }
-      else { yearEl.style.display = 'none'; }
+    // Header Badges
+    if (badgeBrandEl) badgeBrandEl.textContent = brand;
+    const badgeScaleEl = card.querySelector('.diecast-badge--scale');
+    if (badgeScaleEl) {
+      if (scale) { badgeScaleEl.textContent = scale; badgeScaleEl.style.display = ''; }
+      else { badgeScaleEl.style.display = 'none'; }
     }
     if (badgeYearEl) {
       if (year) { badgeYearEl.textContent = year; badgeYearEl.style.display = ''; }
       else { badgeYearEl.style.display = 'none'; }
     }
+    const badgeCodeElActual = badgeCodeEl || card.querySelector('.diecast-badge--code');
+    if (badgeCodeElActual) {
+      const codeVal = code || file._code;
+      if (codeVal) { badgeCodeElActual.textContent = codeVal; badgeCodeElActual.style.display = ''; }
+      else { badgeCodeElActual.style.display = 'none'; }
+    }
+
+    // Model heading
     if (h3El) h3El.textContent = model;
-    const yearSubEl = card.querySelector('.diecast-card__year-sub');
-    if (yearSubEl) {
-      if (year) { yearSubEl.textContent = year; yearSubEl.style.display = ''; }
-      else { yearSubEl.style.display = 'none'; }
-    }
-    if (badgeCodeEl) {
-      if (file._code) { badgeCodeEl.textContent = file._code; badgeCodeEl.style.display = ''; }
-      else { badgeCodeEl.style.display = 'none'; }
-    }
-    // Update scale and material from HTML table
-    const metaSpans = card.querySelectorAll('.diecast-card__meta span');
-    if (metaSpans.length >= 2) {
-      const tableData = file._htmlContent ? extractDiecastDataFromHtml(file._htmlContent) : {};
-      let scale = '';
-      for (const k of ['Ölçek', 'Ölçek (yaklaşık)', 'Olciek', 'Scale']) {
-        if (tableData[k]) { const sm = tableData[k].match(/1:\d+/); if (sm) { scale = sm[0]; break; } }
+
+    // Detailed Collector Fields Grid
+    const fieldCode = card.querySelector('.diecast-field--code .diecast-field__value');
+    if (fieldCode) fieldCode.textContent = code || file._code || '—';
+
+    const fieldScale = card.querySelector('.diecast-field--scale .diecast-field__value');
+    if (fieldScale) fieldScale.textContent = scale || '—';
+
+    const fieldBrand = card.querySelector('.diecast-field--brand .diecast-field__value');
+    if (fieldBrand) fieldBrand.textContent = brand || '—';
+
+    const fieldYear = card.querySelector('.diecast-field--year .diecast-field__value');
+    if (fieldYear) fieldYear.textContent = year || '—';
+
+    const fieldOrigin = card.querySelector('.diecast-field--origin .diecast-field__value');
+    if (fieldOrigin) fieldOrigin.textContent = origin || '—';
+
+    const fieldMaterial = card.querySelector('.diecast-field--material .diecast-field__value');
+    if (fieldMaterial) fieldMaterial.textContent = material || '—';
+
+    const fieldSeriesWrap = card.querySelector('.diecast-field--series');
+    const fieldSeries = card.querySelector('.diecast-field--series .diecast-field__value');
+    if (fieldSeriesWrap && fieldSeries) {
+      if (series) {
+        fieldSeries.textContent = series;
+        fieldSeriesWrap.style.display = '';
+      } else {
+        fieldSeriesWrap.style.display = 'none';
       }
-      let material = '';
-      for (const k of ['Malzeme', 'Material', 'Gövde', 'Govde']) {
-        if (tableData[k]) { material = tableData[k]; break; }
-      }
-      if (scale) metaSpans[0].textContent = scale;
-if (material) metaSpans[1].textContent = material;
-     }
-   }
+    }
+  }
 
    // Plak-specific updates: update vinyl information from extracted HTML data
    if (galleryId === 'plak' && card) {
@@ -1607,6 +1754,7 @@ class GalleryManager {
     this.allFiles = [];
     this.filteredFiles = [];
     this.currentPage = 1;
+    this.pageSize = (this.id === 'diecast') ? 6 : CONFIG.PAGE_SIZE;
     this.currentFilter = 'all';
     this.searchQuery = '';
 
@@ -1850,6 +1998,12 @@ class GalleryManager {
         (file._pressing || '').toLowerCase().includes(q) ||
         (file._matrixNo || '').toLowerCase().includes(q) ||
         (file._condition || '').toLowerCase().includes(q) ||
+        (file._brand || '').toLowerCase().includes(q) ||
+        (file._scale || '').toLowerCase().includes(q) ||
+        (file._origin || '').toLowerCase().includes(q) ||
+        (file._series || '').toLowerCase().includes(q) ||
+        (file._material || '').toLowerCase().includes(q) ||
+        (file._model || '').toLowerCase().includes(q) ||
         file.name.toLowerCase().includes(q);
       const catMatch = cat === 'all' || (file.category || '').toLocaleLowerCase('tr') === cat;
       return nameMatch && catMatch;
@@ -2141,124 +2295,11 @@ class GalleryManager {
 
   createDiecastCard(file, index) {
     const viewUrl = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
-    const { icon } = getFileType(file.mimeType, file.name);
-
     const initialTitle = file._title || (file.isMock ? file.name.replace(/\.(pdf|html|htm|jpg|jpeg|png|webp)$/i, '') : file.name.replace(/\.(html|htm|pdf)$/i, ''));
-    const initialSub = file._subtitle || (file.category || '');
     const hasImage = Boolean(file._image);
-    const code = file._code || '';
 
-    // Parse diecast info from filename/title
-    // Expected format: "MATCHBOX BMW M1 1982" or "MATCHBOX - BMW M1 - 1982"
-    const parseDiecastInfo = (title, file) => {
-      let brand = '';
-      let year = '';
-      let model = title;
-
-      const tableData = file?._htmlContent ? extractDiecastDataFromHtml(file._htmlContent) : {};
-      const rawBrand = tableData['Marka / Üretici'] || tableData['Marka / Seri'] || tableData['Marka'] || tableData['Üretici'] || '';
-      brand = resolveDiecastBrand(rawBrand) || rawBrand;
-
-      // Year from table — try multiple Turkish keys
-      const yearKeys = ['Yıl', 'Üretim Yılı (yaklaşık)', 'Dönem', 'Üretim Yılı', 'Yapım Yılı', 'Model Yılı'];
-      for (const k of yearKeys) {
-        if (tableData[k]) {
-          year = extractYearFromText(tableData[k]);
-          if (year) break;
-        }
-      }
-      // Fallback: search all table values
-      if (!year) {
-        for (const val of Object.values(tableData)) {
-          year = extractYearFromText(val);
-          if (year) break;
-        }
-      }
-
-      // Model from table
-      model = tableData['Araç'] || tableData['Model / Casting'] || tableData['Model Adı'] || tableData['Model'] || tableData['Model Kodu'] || '';
-      if (!model) model = title;
-
-      // Fallback: search text sources for brand
-      if (!brand) {
-        const searchTexts = [title || '', file?.name || '', file?.description || '', file?._subtitle || ''].join(' ');
-        for (const b of DIECAST_BRANDS) {
-          if (new RegExp(`\\b${b.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')}\\b`, 'i').test(searchTexts)) {
-            brand = b;
-            break;
-          }
-        }
-      }
-
-      // Fallback: search text sources for year
-      if (!year) {
-        const searchTexts = [title || '', file?.name || '', file?.description || '', file?._subtitle || ''].join(' ');
-        year = extractYearFromText(searchTexts);
-      }
-
-      model = model
-        .replace(/MERT\s+GÜVENTÜRK\s+KOLEKSİYONU/gi, '')
-        .replace(/GÜVENTÜRK/gi, '')
-        .replace(/KOLEKSİYON(U)?/gi, '')
-        .replace(/^[-–—|\s]+/, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-      if (!model) model = title || file?.name?.replace(/\.\w+$/, '') || 'Diecast';
-
-      const brandUpper = brand ? toEnUpper(brand) : 'DIECAST';
-
-      // Scale from table
-      let scale = '';
-      const scaleKeys = ['Ölçek', 'Ölçek (yaklaşık)', 'Olciek', 'Scale'];
-      for (const k of scaleKeys) {
-        if (tableData[k]) {
-          const sm = tableData[k].match(/1:\d+/);
-          if (sm) { scale = sm[0]; break; }
-        }
-      }
-
-      // Material from table
-      let material = '';
-      const matKeys = ['Malzeme', 'Material', 'Gövde', 'Govde'];
-      for (const k of matKeys) {
-        if (tableData[k]) { material = tableData[k]; break; }
-      }
-
-      return { brand: DIECAST_BRAND_ALIASES[brandUpper] || brandUpper, year, model, scale, material };
-    };
-
-    const detectScale = (brand, title) => {
-      const scaleMatch = title.match(/\b(1:\d+)\b/);
-      if (scaleMatch) return scaleMatch[1];
-      // Brand-specific defaults
-      const brandScales = {
-        'AUTOART': '1:18', 'KYOSHO': '1:18', 'MINICHAMPS': '1:18', 'SPARK': '1:18',
-        'IXO': '1:43', 'NOREV': '1:43', 'SOLIDO': '1:43', 'VANGUARDS': '1:43', 'OXFORD': '1:43',
-        'MATCHBOX': '1:64', 'HOT WHEELS': '1:64', 'CORGI': '1:64', 'DINKY': '1:64',
-        'MAJORETTE': '1:64', 'SIKU': '1:64', 'BURAGO': '1:64', 'MAISTO': '1:64',
-        'WELLY': '1:64', 'JADA': '1:64', 'GREENLIGHT': '1:64', 'RAISE3D': '1:64',
-        'SCHUCO': '1:64', 'TOMY': '1:64', 'TOMCA': '1:64'
-      };
-      return brandScales[brand] || null;
-    };
-
-    const detectMaterial = (brand, title) => {
-      const matMatch = title.match(/\b(resin|diecast|metal|plastic|zinc|white metal)\b/i);
-      if (matMatch) return matMatch[1].charAt(0).toUpperCase() + matMatch[1].slice(1).toLowerCase();
-      // Brand-specific defaults
-      const brandMaterials = {
-        'AUTOART': 'Resin', 'KYOSHO': 'Resin', 'MINICHAMPS': 'Resin', 'SPARK': 'Resin',
-        'IXO': 'Resin', 'NOREV': 'Resin', 'SOLIDO': 'Diecast', 'VANGUARDS': 'Diecast', 'OXFORD': 'Diecast',
-        'MATCHBOX': 'Metal', 'HOT WHEELS': 'Metal', 'CORGI': 'Metal', 'DINKY': 'Metal',
-        'MAJORETTE': 'Metal', 'SIKU': 'Metal', 'BURAGO': 'Metal', 'MAISTO': 'Metal',
-        'WELLY': 'Metal', 'JADA': 'Metal', 'GREENLIGHT': 'Metal'
-      };
-      return brandMaterials[brand] || null;
-    };
-
-    const { brand, year, model, scale: tableScale, material: tableMaterial } = parseDiecastInfo(initialTitle, file);
-    const scale = file._scale || tableScale || detectScale(brand, initialTitle) || '1:64';
-    const material = file._material || tableMaterial || detectMaterial(brand, initialTitle) || 'Metal';
+    const diecastData = parseDiecastInfo(file, file._htmlContent);
+    const { brand, year, model, scale, origin, series, material, code } = diecastData;
 
     const card = document.createElement('div');
     card.className = 'diecast-card reveal';
@@ -2266,8 +2307,8 @@ class GalleryManager {
     card.setAttribute('role', 'button');
     card.setAttribute('tabindex', '0');
     card.setAttribute('aria-label', `${brand} ${model}${year ? ' ' + year : ''} — görüntüle`);
-    card.dataset.name = initialTitle.toLowerCase();
-    card.dataset.category = (file.category || '').toLowerCase();
+    card.dataset.name = (model + ' ' + brand + ' ' + (code || '')).toLowerCase();
+    card.dataset.category = (brand || file.category || '').toLowerCase();
     card.dataset.fileId = file.id || '';
     card.dataset.viewUrl = viewUrl;
     card.dataset.mimeType = file.mimeType || '';
@@ -2276,7 +2317,7 @@ class GalleryManager {
     card.innerHTML = `
       <div class="diecast-label diecast-label--card">
         <span class="diecast-label__brand">${brand}</span>
-        ${year ? `<span class="diecast-label__year">${year}</span>` : ''}
+        ${scale ? `<span class="diecast-label__scale">${scale}</span>` : ''}
       </div>
       <div class="diecast-card__image-wrap">
         <img class="diecast-card__image card-img-el" src="${hasImage ? file._image : ''}" alt="${brand} ${model}${year ? ' ' + year : ''}" ${hasImage ? '' : 'style="display:none;"'} />
@@ -2287,14 +2328,40 @@ class GalleryManager {
       <div class="diecast-card__content">
         <div class="diecast-card__badges">
           <span class="diecast-badge diecast-badge--brand">${brand}</span>
+          ${scale ? `<span class="diecast-badge diecast-badge--scale">${scale}</span>` : ''}
           ${year ? `<span class="diecast-badge diecast-badge--year">${year}</span>` : ''}
-          ${file._code ? `<span class="diecast-badge diecast-badge--series">${file._code}</span>` : ''}
+          ${code ? `<span class="diecast-badge diecast-badge--code">${code}</span>` : ''}
         </div>
         <h3 class="diecast-card__model">${model}</h3>
-        ${year ? `<div class="diecast-card__year-sub">${year}</div>` : ''}
-        <div class="diecast-card__meta">
-          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> ${scale}</span>
-          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg> ${material}</span>
+        <div class="diecast-card__fields">
+          <div class="diecast-field diecast-field--code">
+            <span class="diecast-field__label">Katalog No</span>
+            <span class="diecast-field__value">${code || '—'}</span>
+          </div>
+          <div class="diecast-field diecast-field--scale">
+            <span class="diecast-field__label">Ölçek</span>
+            <span class="diecast-field__value">${scale || '—'}</span>
+          </div>
+          <div class="diecast-field diecast-field--brand">
+            <span class="diecast-field__label">Marka</span>
+            <span class="diecast-field__value">${brand || '—'}</span>
+          </div>
+          <div class="diecast-field diecast-field--year">
+            <span class="diecast-field__label">Üretim Yılı</span>
+            <span class="diecast-field__value">${year || '—'}</span>
+          </div>
+          <div class="diecast-field diecast-field--origin">
+            <span class="diecast-field__label">Menşei</span>
+            <span class="diecast-field__value">${origin || '—'}</span>
+          </div>
+          <div class="diecast-field diecast-field--material">
+            <span class="diecast-field__label">Malzeme</span>
+            <span class="diecast-field__value">${material || '—'}</span>
+          </div>
+          <div class="diecast-field diecast-field--series diecast-field--full" ${series ? '' : 'style="display:none;"'}>
+            <span class="diecast-field__label">Seri / Model No</span>
+            <span class="diecast-field__value">${series || '—'}</span>
+          </div>
         </div>
       </div>
     `;
@@ -2302,15 +2369,14 @@ class GalleryManager {
     const imgEl = card.querySelector('.card-img-el');
     const placeholderEl = card.querySelector('.card-placeholder-el');
     const brandEl = card.querySelector('.diecast-label__brand');
-    const yearEl = card.querySelector('.diecast-label__year');
     const badgeBrandEl = card.querySelector('.diecast-badge--brand');
     const badgeYearEl = card.querySelector('.diecast-badge--year');
-    const badgeCodeEl = card.querySelector('.diecast-badge--series');
+    const badgeCodeEl = card.querySelector('.diecast-badge--code');
     const h3El = card.querySelector('.diecast-card__model');
 
     if (!file.isMock && (!file._title || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim()) {
-        previewQueue.push({ file, imgEl, fallbackEl: placeholderEl, card, gallery: this, isDiecast: true, brandEl, yearEl, badgeBrandEl, badgeYearEl, badgeCodeEl, h3El });
+        previewQueue.push({ file, imgEl, fallbackEl: placeholderEl, card, gallery: this, isDiecast: true, brandEl, badgeBrandEl, badgeYearEl, badgeCodeEl, h3El });
         processPreviewQueue();
       }
     }
@@ -2352,12 +2418,13 @@ class GalleryManager {
       return;
     }
 
-    const totalPages = Math.ceil(this.filteredFiles.length / CONFIG.PAGE_SIZE);
+    const pageSize = this.pageSize || CONFIG.PAGE_SIZE;
+    const totalPages = Math.ceil(this.filteredFiles.length / pageSize);
     if (this.currentPage > totalPages) this.currentPage = totalPages;
     if (this.currentPage < 1) this.currentPage = 1;
 
-    const startIndex = (this.currentPage - 1) * CONFIG.PAGE_SIZE;
-    const endIndex = startIndex + CONFIG.PAGE_SIZE;
+    const startIndex = (this.currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
     const slice = this.filteredFiles.slice(startIndex, endIndex);
 
     slice.forEach((file, i) => {

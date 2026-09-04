@@ -1366,26 +1366,31 @@ html[data-theme="dark"] .diecast-card:hover {
 
 .diecast-badge {
   font-family: var(--font-mono);
-  font-size: .6rem;
+  font-size: .62rem;
   font-weight: 600;
-  letter-spacing: .08em;
+  letter-spacing: .06em;
   text-transform: uppercase;
   padding: 3px 8px;
   border-radius: 4px;
 }
 .diecast-badge--brand { background: var(--azure-light); color: var(--azure); }
+.diecast-badge--scale { background: rgba(14,27,51,.07); color: var(--ink-soft); }
 .diecast-badge--year { background: var(--gold-light); color: var(--gold); }
 .diecast-badge--series { background: var(--coral-light); color: var(--coral); }
-html[data-theme="dark"] .diecast-badge--brand { background: rgba(61,99,255,.18); }
-html[data-theme="dark"] .diecast-badge--year { background: rgba(239,174,61,.18); }
-html[data-theme="dark"] .diecast-badge--series { background: rgba(255,98,71,.18); }
+.diecast-badge--code { background: var(--paper-alt); color: var(--ink); border: 1px solid var(--line); }
+html[data-theme="dark"] .diecast-badge--brand { background: rgba(61,99,255,.18); color: var(--azure); }
+html[data-theme="dark"] .diecast-badge--scale { background: rgba(255,255,255,.08); color: var(--ink-soft); }
+html[data-theme="dark"] .diecast-badge--year { background: rgba(239,174,61,.18); color: var(--gold); }
+html[data-theme="dark"] .diecast-badge--series { background: rgba(255,98,71,.18); color: var(--coral); }
+html[data-theme="dark"] .diecast-badge--code { background: rgba(255,255,255,.08); color: var(--ink); border-color: var(--line); }
 
 .diecast-card__model {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: .98rem;
+  font-size: 1.02rem;
   color: var(--ink);
-  line-height: 1.3;
+  line-height: 1.35;
+  margin-top: 2px;
 }
 html[data-theme="dark"] .diecast-card__model { color: var(--ink); }
 
@@ -1395,6 +1400,80 @@ html[data-theme="dark"] .diecast-card__model { color: var(--ink); }
   color: var(--ink-soft);
   margin-top: 2px;
   letter-spacing: .02em;
+}
+
+.diecast-card__fields {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 12px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.diecast-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.diecast-field__label {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  line-height: 1.1;
+}
+
+html[data-theme="dark"] .diecast-field__label {
+  color: rgba(241,244,249,.50);
+}
+
+.diecast-field__value {
+  font-family: var(--font-body);
+  font-size: .80rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color .2s ease;
+}
+
+html[data-theme="dark"] .diecast-field__value {
+  color: var(--ink);
+}
+
+.diecast-card:hover .diecast-field__value {
+  color: var(--azure);
+}
+
+html[data-theme="dark"] .diecast-card:hover .diecast-field__value {
+  color: var(--gold);
+}
+
+.diecast-field--full {
+  grid-column: span 2;
+}
+
+.diecast-label__scale {
+  font-family: var(--font-mono);
+  font-size: .68rem;
+  font-weight: 600;
+  color: var(--azure);
+  background: var(--azure-light);
+  padding: 2px 8px;
+  border-radius: 999px;
+  display: inline-block;
+  align-self: flex-start;
+}
+html[data-theme="dark"] .diecast-label__scale {
+  background: rgba(61,99,255,.2);
+  color: var(--azure);
 }
 
 .diecast-card__meta {
