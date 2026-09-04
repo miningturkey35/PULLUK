@@ -1093,7 +1093,8 @@ function extractPlakInfoFromHtml(html) {
   return { title, subtitle, image, code, artist, album, plakSirketi, katalogNo, year, format, country, genre, pressing, matrixNo, condition };
 }
 const DB_NAME = 'PullukDB';
-const DB_VERSION = 6;
+const DB_VERSION = 7; // Incremented to clear stale HTML cache
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const STORE_NAME = 'fileCache';
 
 function initDB() {
@@ -1131,7 +1132,9 @@ async function getFileFromCache(file) {
       req.onerror = () => reject(req.error);
     });
 
-    if (cached && cached.modifiedTime === file.modifiedTime) {
+    const now = Date.now();
+    const isExpired = cached && cached.cachedAt && (now - cached.cachedAt > CACHE_TTL_MS);
+    if (cached && cached.modifiedTime === file.modifiedTime && !isExpired) {
       file._title = cached._title;
       file._subtitle = cached._subtitle;
       file._image = cached._image;
@@ -1172,6 +1175,7 @@ async function saveFileToCache(file) {
     const data = {
       id: file.id,
       modifiedTime: file.modifiedTime,
+      cachedAt: Date.now(),
       _title: file._title,
       _subtitle: file._subtitle,
       _image: file._image,
