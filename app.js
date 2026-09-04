@@ -1797,25 +1797,59 @@ class GalleryManager {
   async load() {
     console.log(`[PULLUK] load() start for ${this.id}`);
     if (this.els.loading) this.els.loading.style.display = 'flex';
-    const hideTimeout = setTimeout(() => {
-      console.log(`[PULLUK] load() hideTimeout fired for ${this.id}`);
-      if (this.els.loading) this.els.loading.style.display = 'none';
-      if (this.els.meta) this.els.meta.innerHTML = `<span>0</span> yüklenemedi`;
-    }, 8000);
-    try {
-      this.allFiles = await fetchDriveFiles(this.folderId, this.els.notice, this.id);
-      console.log(`[PULLUK] load() fetched ${this.allFiles.length} files for ${this.id}`);
-      const cachePromise = Promise.all(this.allFiles.map(file => getFileFromCache(file)));
-      const cacheTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Cache timeout')), 10000));
-      try { await Promise.race([cachePromise, cacheTimeout]); } catch (_e) { /* proceed even if cache is slow */ }
+
+    // 1. Instant loading from precompiled collection data
+    if (window.PULLUK_COLLECTION_DATA && window.PULLUK_COLLECTION_DATA[this.id]) {
+      this.allFiles = window.PULLUK_COLLECTION_DATA[this.id].map(p => ({ ...p }));
       this.updateFilterButtonsDynamically();
       this.filteredFiles = [...this.allFiles];
       this.renderGallery();
-      console.log(`[PULLUK] load() renderGallery done for ${this.id}`);
       const counterEl = document.querySelector(`.${this.id === 'galeri' ? 'pul' : this.id}-count-num`);
       if (counterEl) {
         counterEl.dataset.target = this.allFiles.length;
         counterEl.textContent = this.allFiles.length + '+';
+      }
+      if (this.els.loading) this.els.loading.style.display = 'none';
+    }
+
+    const hideTimeout = setTimeout(() => {
+      if (this.els.loading) this.els.loading.style.display = 'none';
+    }, 8000);
+
+    try {
+      const driveFiles = await fetchDriveFiles(this.folderId, this.els.notice, this.id);
+      if (driveFiles && driveFiles.length > 0) {
+        console.log(`[PULLUK] load() fetched ${driveFiles.length} files from Drive for ${this.id}`);
+        const fileMap = new Map();
+        this.allFiles.forEach(f => fileMap.set(f.id, f));
+
+        driveFiles.forEach(df => {
+          if (!fileMap.has(df.id)) {
+            this.allFiles.push(df);
+          } else {
+            const existing = fileMap.get(df.id);
+            Object.assign(existing, df, {
+              _title: existing._title || df._title,
+              _image: existing._image || df._image,
+              _code: existing._code || df._code
+            });
+          }
+        });
+
+        const cachePromise = Promise.all(this.allFiles.map(file => getFileFromCache(file)));
+        const cacheTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Cache timeout')), 3000));
+        try { await Promise.race([cachePromise, cacheTimeout]); } catch (_e) { }
+
+        this.updateFilterButtonsDynamically();
+        this.filteredFiles = [...this.allFiles];
+        this.renderGallery();
+        console.log(`[PULLUK] load() renderGallery done for ${this.id}`);
+
+        const counterEl = document.querySelector(`.${this.id === 'galeri' ? 'pul' : this.id}-count-num`);
+        if (counterEl) {
+          counterEl.dataset.target = this.allFiles.length;
+          counterEl.textContent = this.allFiles.length + '+';
+        }
       }
     } catch (err) {
       console.error(`[PULLUK] load() error for ${this.id}:`, err);
@@ -2269,11 +2303,13 @@ class GalleryManager {
 
     const imgEl = card.querySelector('.card-img-el');
     const fallbackEl = card.querySelector('.card-fallback-el');
+    const titleEl = card.querySelector('.plak-field-title .pdf-card-title-value');
+    const subEl = card.querySelector('.plak-field-artist .pdf-card-field__value');
 
     // Queue for preview extraction if we don't have full data yet
     if (!file.isMock && (!file._artist || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim()) {
-        previewQueue.push({ file, titleEl: null, subEl: null, imgEl, fallbackEl, codeEl: null, card, gallery: this, koleksiyonEl: null, ulkeEl: null, yilEl: null, nominalEl: null, tipiEl: null, galleryId: 'plak' });
+        previewQueue.push({ file, titleEl, subEl, imgEl, fallbackEl, codeEl: null, card, gallery: this, koleksiyonEl: null, ulkeEl: null, yilEl: null, nominalEl: null, tipiEl: null, galleryId: 'plak' });
         processPreviewQueue();
       }
     }
@@ -2514,23 +2550,43 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
   const displayTitle = (cachedFile && cachedFile._title) || title || 'Detay';
 
   titleEl.textContent = displayTitle;
-  collectionEl.textContent = '';
-  collectionEl.style.display = 'none';
+  const codeVal = (cachedFile && (cachedFile._code || cachedFile._katalogNo)) || '';
+  collectionEl.textContent = codeVal;
+  collectionEl.style.display = codeVal ? 'inline-block' : 'none';
   loading.classList.remove('is-hidden');
   frame.src = '';
+  frame.removeAttribute('srcdoc');
   modal.hidden = false;
   document.body.style.overflow = 'hidden';
   viewerOpen = true;
 
-  const apiKey = CONFIG.GOOGLE_API_KEY.trim();
   let content = cachedFile && cachedFile._htmlContent;
   let loaded = false;
 
-  const isHtml = (mimeType === 'text/html' || (cachedFile && cachedFile.name.endsWith('.html')));
+  const isHtml = (mimeType === 'text/html' || (cachedFile && cachedFile.name && cachedFile.name.endsWith('.html')));
 
-  if (!content && apiKey && fileId && isHtml) {
+  // If content is not in memory, try loading from /drive-proxy or /files/
+  if (!content && isHtml) {
+    if (window.location.protocol === 'http:') {
+      try {
+        const res = await fetch(`/drive-proxy?fileId=${fileId}`);
+        if (res.ok) {
+          content = await res.text();
+          if (cachedFile) {
+            cachedFile._htmlContent = content;
+            saveFileToCache(cachedFile);
+          }
+        }
+      } catch (err) {
+        console.warn('[PULLUK] proxy fetch failed:', err);
+      }
+    }
+  }
+
+  // If still no content and API key exists, try alt=media as last resort
+  if (!content && isHtml && CONFIG.GOOGLE_API_KEY.trim()) {
     try {
-      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${apiKey}`);
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${CONFIG.GOOGLE_API_KEY.trim()}`);
       if (res.ok) {
         content = await res.text();
         if (cachedFile) {
@@ -2541,8 +2597,8 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
     } catch (err) { }
   }
 
-  // Extract collection number from HTML content using existing function
-  if (content) {
+  // Extract collection number if we now have content
+  if (content && !codeVal) {
     const { code: collectionNumber } = extractStampInfoFromHtml(content);
     if (collectionNumber) {
       collectionEl.textContent = collectionNumber;
@@ -2554,11 +2610,23 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
     currentFileHtml = content;
     const mime = mimeType || 'text/html';
     if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
-    const blob = new Blob([content], { type: mime });
+    const blob = new Blob([content], { type: 'text/html; charset=utf-8' });
     currentBlobUrl = URL.createObjectURL(blob);
     frame.onload = () => loading.classList.add('is-hidden');
     frame.src = currentBlobUrl;
     loaded = true;
+  }
+
+  // If blob wasn't created, try loading directly into iframe
+  if (!loaded && isHtml) {
+    frame.onload = () => loading.classList.add('is-hidden');
+    if (window.location.protocol === 'http:') {
+      frame.src = `/drive-proxy?fileId=${fileId}`;
+      loaded = true;
+    } else {
+      frame.src = `files/${fileId}.html`;
+      loaded = true;
+    }
   }
 
   if (!loaded && fileId && !isHtml) {

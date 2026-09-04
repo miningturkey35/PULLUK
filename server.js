@@ -18,25 +18,62 @@ const MIME = {
 const ROOT = __dirname;
 
 function proxyDrive(fileId, res) {
+  // 1. Check if file exists locally in files/
+  const localFile = path.join(ROOT, 'files', `${fileId}.html`);
+  if (fs.existsSync(localFile)) {
+    const stat = fs.statSync(localFile);
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Content-Length': stat.size,
+      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'public, max-age=86400',
+    });
+    fs.createReadStream(localFile).pipe(res);
+    return;
+  }
+
+  // 2. If not local, fetch from Google Drive and save locally
   const driveUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
-  https.get(driveUrl, { timeout: 20000 }, (proxyRes) => {
-    if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
-      https.get(proxyRes.headers.location, { timeout: 20000 }, (proxyRes2) => {
-        res.writeHead(proxyRes2.statusCode, {
-          'Content-Type': proxyRes2.headers['content-type'] || 'application/octet-stream',
+  https.get(driveUrl, { timeout: 30000 }, (proxyRes) => {
+    const handleRedirect = (loc) => {
+      https.get(loc, { timeout: 30000 }, (proxyRes2) => {
+        if (proxyRes2.statusCode >= 300 && proxyRes2.statusCode < 400 && proxyRes2.headers.location) {
+          handleRedirect(proxyRes2.headers.location);
+          return;
+        }
+        if (proxyRes2.statusCode !== 200) {
+          res.writeHead(proxyRes2.statusCode, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+          res.end('Drive error status: ' + proxyRes2.statusCode);
+          return;
+        }
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
           'Access-Control-Allow-Origin': '*',
         });
+        const fileStream = fs.createWriteStream(localFile);
+        proxyRes2.pipe(fileStream);
         proxyRes2.pipe(res);
       }).on('error', (err) => {
         res.writeHead(502, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
         res.end('Proxy redirect error: ' + err.message);
       });
+    };
+
+    if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
+      handleRedirect(proxyRes.headers.location);
       return;
     }
-    res.writeHead(proxyRes.statusCode, {
-      'Content-Type': proxyRes.headers['content-type'] || 'application/octet-stream',
+    if (proxyRes.statusCode !== 200) {
+      res.writeHead(proxyRes.statusCode, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
+      res.end('Drive error status: ' + proxyRes.statusCode);
+      return;
+    }
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
       'Access-Control-Allow-Origin': '*',
     });
+    const fileStream = fs.createWriteStream(localFile);
+    proxyRes.pipe(fileStream);
     proxyRes.pipe(res);
   }).on('error', (err) => {
     res.writeHead(502, { 'Content-Type': 'text/plain', 'Access-Control-Allow-Origin': '*' });
