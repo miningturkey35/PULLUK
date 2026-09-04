@@ -2836,8 +2836,8 @@ function initBackToTop() {
 // ─── PREVIEW CAROUSEL ─────────────────────────────────────────────────────
 function initPreviewCarousel() {
   const list = document.querySelector('.preview-images-list');
-  const img = document.querySelector('#previewCarousel .preview-image');
-  if (!list || !img) return;
+  const carousel = document.getElementById('previewCarousel');
+  if (!list || !carousel) return;
 
   const urls = Array.from(list.querySelectorAll('a'))
     .map(a => a.getAttribute('href'))
@@ -2845,16 +2845,22 @@ function initPreviewCarousel() {
 
   if (urls.length === 0) return;
 
-  let current = Math.floor(Math.random() * urls.length);
-  img.src = urls[current];
+  // Get all 9 img elements in the grid
+  const imgs = carousel.querySelectorAll('.preview-image');
 
+  // Populate 9 slots: cycle through available URLs
+  const shuffled = [...urls].sort(() => Math.random() - 0.5);
+  imgs.forEach((imgEl, i) => {
+    imgEl.src = shuffled[i % shuffled.length];
+  });
+
+  // Periodically rotate one random slot
   setInterval(() => {
-    let next;
-    do { next = Math.floor(Math.random() * urls.length); } while (next === current && urls.length > 1);
-    current = next;
-    img.style.opacity = '0';
-    setTimeout(() => { img.src = urls[current]; img.style.opacity = '1'; }, 250);
-  }, 5000);
+    const slot = Math.floor(Math.random() * imgs.length);
+    const newUrl = urls[Math.floor(Math.random() * urls.length)];
+    imgs[slot].style.opacity = '0';
+    setTimeout(() => { imgs[slot].src = newUrl; imgs[slot].style.opacity = '1'; }, 250);
+  }, 4000);
 }
 
 // ─── MAIN INIT ─────────────────────────────────────────────────────────────
