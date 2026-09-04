@@ -72,6 +72,7 @@
         <a href="#galeri">Pul Arşivi</a>
         <a href="#diecast">DIECAST</a>
         <a href="#plak">Plak Arşivi</a>
+        <a href="#banknot">Cüzdan-ı Kadim</a>
         <a href="#allother">Daha Ne Varsa</a>
         <a href="#koleksiyoncu">Hakkında</a>
       </nav>
@@ -240,8 +241,26 @@
         </div>
       </div>
 
-      <!-- Daha Ne Varsa -->
+      <!-- Cüzdan-ı Kadim — Banknot Koleksiyonu -->
       <div class="collection-card reveal reveal-delay-4"
+           role="button" tabindex="0"
+           data-scroll-to="banknot"
+           aria-label="Banknot Koleksiyonunu görüntüle"
+           style="cursor:pointer;">
+        <div class="card-stripe stripe-emerald"></div>
+        <div class="card-body">
+          <div class="card-icon icon-emerald" aria-hidden="true">💵</div>
+          <h3>Cüzdan-ı Kadim</h3>
+          <p>Osmanlı'dan günümüze nadir banknot eserleri. Özenle muhafaza edilmiş koleksiyonluk kağıt para arşivi.</p>
+          <div class="card-count">
+            <span class="count-num banknot-count-num">—</span>
+            <span class="count-label">Parça</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daha Ne Varsa -->
+      <div class="collection-card reveal reveal-delay-5"
            role="button" tabindex="0"
            data-scroll-to="allother"
            aria-label="Daha Ne Varsa Koleksiyonunu görüntüle"
@@ -467,6 +486,74 @@
   </div>
 </section>
 
+<!-- ════════════════════════════════════════
+     BANKNOT — CÜZDAN-I KADİM
+     ════════════════════════════════════════ -->
+<section class="section gallery-section" id="banknot" aria-labelledby="banknot-heading">
+  <div class="wrap">
+
+    <div class="section-head reveal">
+      <span class="eyebrow">Banknot Koleksiyonu</span>
+      <h2 id="banknot-heading">CÜZDAN-I KADİM</h2>
+      <p>Osmanlı İmparatorluğu'ndan günümüze uzanan nadir kağıt para eserleri. Her biri özenle muhafaza edilmiş koleksiyonluk banknot arşivi.</p>
+    </div>
+
+    <!-- API Notice Banner -->
+    <div class="api-notice" id="apiNotice_banknot" role="alert">
+      <span class="api-notice-icon" aria-hidden="true">💡</span>
+      <div class="api-notice-text">
+        <b>Demo Modu</b>
+        Şu an örnek veriler gösteriliyor. Gerçek Drive dosyalarını görmek için <code>app.js</code> dosyasındaki
+        <code>GOOGLE_API_KEY</code> alanına Google Cloud API Key'inizi ekleyin.
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="gallery-controls reveal">
+      <div class="search-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input
+          type="search"
+          class="search-box"
+          id="searchBox_banknot"
+          placeholder="Banknot ara… (ülke, nominal, yıl, seri, katalog, kondisyon)"
+          aria-label="Banknot koleksiyonunda ara"
+          autocomplete="off"
+        >
+      </div>
+      <div class="filter-row" id="filterRow_banknot" role="group" aria-label="Kategoriye göre filtrele">
+        <button class="filter-btn is-active" data-filter="all">Tümü</button>
+      </div>
+    </div>
+
+    <!-- Gallery meta -->
+    <div class="gallery-meta reveal" id="galleryMeta_banknot" aria-live="polite" aria-atomic="true">
+      Yükleniyor…
+    </div>
+
+    <!-- Banknot Grid -->
+    <div class="pdf-grid" id="pdfGrid_banknot" aria-label="Banknot koleksiyonu">
+
+      <!-- Loading state -->
+      <div class="gallery-loading" id="galleryLoading_banknot" aria-label="Yükleniyor" role="status">
+        <div class="spinner" aria-hidden="true"></div>
+        <span class="loading-text">Koleksiyon yükleniyor…</span>
+      </div>
+
+      <!-- Empty state -->
+      <div class="gallery-empty" id="galleryEmpty_banknot" aria-label="Sonuç bulunamadı">
+        <div class="empty-icon" aria-hidden="true">🔍</div>
+        <div class="empty-text">Aramanızla eşleşen banknot bulunamadı</div>
+      </div>
+
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-container" id="paginationContainer_banknot"></div>
+
+  </div>
+</section>
+
 <section class="section gallery-section" id="allother" aria-labelledby="allother-heading">
   <div class="wrap">
 
@@ -673,6 +760,6 @@
 </button>
 
 <script>window.onerror=function(m,s,l,c,e){document.body.innerHTML='<pre style="color:red;padding:20px">JS HATA: '+m+'\nSatır: '+l+', Sütun: '+c+'\nDosya: '+s+'\n'+(e?e.stack:'')+'</pre>';return true;}</script>
-<script src="app.js?v=32"></script>
+<script src="app.js?v=33"></script>
 </body>
 </html>
