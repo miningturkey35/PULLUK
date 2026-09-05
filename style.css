@@ -1013,6 +1013,10 @@ html[data-theme="dark"] .plak-field-format .pdf-card-field__value {
   background: var(--gold-light);
   color: var(--gold);
 }
+/* Format field spans full width at bottom */
+.plak-field-format--full {
+  grid-column: 1 / -1 !important;
+}
 
 /* Plak card labels: consistent color, artist = gold */
 .plak-card .pdf-card-field__label {

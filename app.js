@@ -1820,10 +1820,9 @@ function updateCardUI(item) {
        { el: 'plak-field-genre', value: file._genre || '' },
        { el: 'plak-field-katalog', value: file._katalogNo || '' },
        { el: 'plak-field-year', value: file._year || '' },
-       { el: 'plak-field-format', value: file._format || '' },
        { el: 'plak-field-pressing', value: file._pressing || '' },
-       { el: 'plak-field-matrix', value: file._matrixNo || '' },
-       { el: 'plak-field-collection', value: fileNameNoExt || '' }
+       { el: 'plak-field-collection', value: fileNameNoExt || '' },
+       { el: 'plak-field-format', value: file._format || '' }
      ];
      
      plakFields.forEach(field => {
@@ -2358,21 +2357,17 @@ class GalleryManager {
             <span class="pdf-card-field__label">Yıl</span>
             <span class="pdf-card-field__value">${year || '—'}</span>
           </div>
-          <div class="pdf-card-field plak-field-format">
-            <span class="pdf-card-field__label">Format</span>
-            <span class="pdf-card-field__value">${formatInfo || '—'}</span>
-          </div>
           <div class="pdf-card-field plak-field-pressing">
             <span class="pdf-card-field__label">Basım</span>
             <span class="pdf-card-field__value">${pressing || '—'}</span>
           </div>
-          <div class="pdf-card-field plak-field-matrix">
-            <span class="pdf-card-field__label">Matriks No</span>
-            <span class="pdf-card-field__value">${matrixNo || '—'}</span>
-          </div>
           <div class="pdf-card-field plak-field-collection">
             <span class="pdf-card-field__label">Koleksiyon No</span>
             <span class="pdf-card-field__value">${fileNameNoExt || '—'}</span>
+          </div>
+          <div class="pdf-card-field plak-field-format plak-field-format--full">
+            <span class="pdf-card-field__label">Format</span>
+            <span class="pdf-card-field__value">${formatInfo || '—'}</span>
           </div>
         </div>
       </div>
