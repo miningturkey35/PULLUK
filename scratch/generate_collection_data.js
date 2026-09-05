@@ -15,6 +15,42 @@ const FOLDERS = {
   'allother': '1mmPvVEreFr0cbXjX3Ds21FOsZI9cRaH0'
 };
 
+// Normalize country names to short, consistent form
+function normalizeCountry(name) {
+  if (!name) return '';
+  const n = name.trim();
+  const map = {
+    'Osmanlı İmparatorluğu': 'Osmanlı İmp.',
+    'Türkiye Cumhuriyeti': 'T.C.',
+    'Türkiye (Cumhuriyet)': 'T.C.',
+    'Türkiye · Türkiye Kızılay Gençliği': 'T.C.',
+    'Birleşik Krallık': 'UK',
+    'Birleşik Krallık (UK)': 'UK',
+    'Almanya': 'Almanya',
+    'ABD': 'ABD',
+    'Fransa': 'Fransa',
+    'İtalya': 'İtalya',
+    'Rusya': 'Rusya',
+    'Japonya': 'Japonya',
+    'Çin': 'Çin',
+    'Türkiye': 'T.C.',
+  };
+  if (map[n]) return map[n];
+  // Fuzzy match
+  const low = n.toLowerCase();
+  if (low.includes('osmanlı') || low.includes('ottoman')) return 'Osmanlı İmp.';
+  if (low.includes('türkiye') || low.includes('turkiye') || low.includes('t.c.')) return 'T.C.';
+  if (low.includes('birleşik krallık') || low.includes('united kingdom') || low.includes('ingiltere') || low.includes('england') || low.includes('gt. britain')) return 'UK';
+  if (low.includes('almanya') || low.includes('germany')) return 'Almanya';
+  if (low.includes('abd') || low.includes('usa') || low.includes('united states')) return 'ABD';
+  if (low.includes('fransa') || low.includes('france')) return 'Fransa';
+  if (low.includes('italya') || low.includes('italy') || low.includes('italia')) return 'İtalya';
+  if (low.includes('rusya') || low.includes('russia') || low.includes('cccp') || low.includes('sssr')) return 'Rusya';
+  if (low.includes('japonya') || low.includes('japan')) return 'Japonya';
+  if (low.includes('çin') || low.includes('chin')) return 'Çin';
+  return n;
+}
+
 function extractAllInfo(fileId, fileName, galleryType, html) {
   const data = {
     id: fileId,
@@ -105,8 +141,19 @@ function extractAllInfo(fileId, fileName, galleryType, html) {
     else if (textLow.includes('osmanlı') || textLow.includes('ottoman')) data._country = 'Osmanlı İmp.';
   }
 
-  // Year
+  // Normalize country name to short form
+  data._country = normalizeCountry(data._country);
+
+  // Year (production year of the toy)
   data._year = find('basım yılı', 'yıl', 'dolaşım yılı', 'üretim yılı', 'tarih', 'year') || '';
+  // For diecast: also try 'Seri / Numara' which often contains production year (e.g. '2024 1-100')
+  if (!data._year && galleryType === 'diecast') {
+    const seriNumara = find('seri / numara', 'seri');
+    if (seriNumara) {
+      const ym = seriNumara.match(/\b((?:18|19|20)\d{2})\b/);
+      if (ym) data._year = ym[1];
+    }
+  }
   if (!data._year) {
     const ym = html.match(/\b((?:18|19|20)\d{2})\b/);
     if (ym) data._year = ym[1];
@@ -116,7 +163,22 @@ function extractAllInfo(fileId, fileName, galleryType, html) {
   }
 
   data._nominalDeger = find('nominal değer', 'nominal', 'değer') || '';
+  // Fallback: extract from text if not found in table
+  if (!data._nominalDeger) {
+    const nomMatch = textLow.match(/nominal değer[:\s]+([\d\w\s.,]+(?:kuruş|kurus|para|lira|₺|tl|sent|dollar|euro|franc|mark|yen|rupi|dinar|ruble))/i);
+    if (nomMatch) data._nominalDeger = nomMatch[1].trim();
+    else {
+      const currMatch = html.replace(/<[^>]+>/g, ' ').match(/\b(\d+[.,]?\d*)\s*(kuruş|kurus|para|lira|₺|tl)\b/i);
+      if (currMatch) data._nominalDeger = currMatch[0].trim();
+    }
+  }
   data._pulTipi = find('pul tipi', 'tipi', 'tür', 'emisyon') || '';
+  // Fallback: extract pul tipi from text if not found in table
+  if (!data._pulTipi) {
+    const textAll = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    const damgaMatch = textAll.match(/\b(damga\s+pulu|posta\s+pulu|vergi\s+pulu|harç\s+pulu|anma\s+pulu|konulu\s+pulu|tematik\s+pulu|hatıra\s+pulu|resim\s+pulu|adi\s+pulu|resmi\s+pulu|fiscal|revenue|postage)\b/i);
+    if (damgaMatch) data._pulTipi = damgaMatch[0];
+  }
   data._durum = find('durum', 'kondisyon', 'condition') || 'Çil (Mint)';
   data._katalogNo = find('katalog no', 'katalog', 'katalog numarası') || data._code;
 
@@ -155,6 +217,18 @@ function extractAllInfo(fileId, fileName, galleryType, html) {
     data._origin = find('menşei', 'üretim yeri') || '';
     data._series = find('seri', 'model no', 'katalog no') || '';
     data._material = find('malzeme', 'gövde') || 'Diecast Metal';
+    // Extract model year from model name (e.g. '1957 Ford Custom 300' → 1957)
+    const modelYearMatch = (data._model || '').match(/^\b((?:18|19|20)\d{2})\b/);
+    if (modelYearMatch) {
+      data._modelYear = modelYearMatch[1];
+    } else {
+      const myf = (data._model || '').match(/\b((?:18|19|20)\d{2})\b/);
+      if (myf) data._modelYear = myf[1];
+    }
+    if (!data._modelYear) {
+      data._modelYear = find('model yılı', 'arac yılı', 'araç yılı') || '';
+    }
+    data._productionYear = data._year;
     if (!data._brand) {
       if (html.toLowerCase().includes('corgi')) data._brand = 'CORGI';
       else if (html.toLowerCase().includes('matchbox')) data._brand = 'MATCHBOX';

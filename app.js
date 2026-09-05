@@ -128,12 +128,50 @@ function buildStampCodeBadge(code, country, year) {
 function extractCountryFromText(text) {
   if (!text) return '';
   const lower = text.toLowerCase();
+  // Check more specific terms first to avoid false matches
   for (const c of STAMP_COUNTRIES) {
     for (const kw of c.keywords) {
       if (lower.includes(kw)) return c.name;
     }
   }
+  // Additional fallback patterns
+  if (/\bt\.c\.\b|\btürkiye cumhuriyeti\b|\bturkiye cumhuriyeti\b/.test(lower)) return 'Türkiye Cumhuriyeti';
+  if (/\bosmanlı\b|\bottoman\b/.test(lower)) return 'Osmanlı İmp.';
+  if (/\bingiltere\b|\bengland\b|\bgreat britain\b|\bunited kingdom\b|\buk\b/.test(lower)) return 'Birleşik Krallık';
+  if (/\balmanya\b|\bgermany\b|\bdeutschland\b/.test(lower)) return 'Almanya';
+  if (/\babd\b|\busa\b|\bunited states\b|\bamerika\b/.test(lower)) return 'ABD';
+  if (/\bfransa\b|\bfrance\b/.test(lower)) return 'Fransa';
+  if (/\bitalya\b|\bitaly\b|\bitalia\b/.test(lower)) return 'İtalya';
+  if (/\brusya\b|\brussia\b|\bsssr\b|\bcccp\b|\bsoviet\b/.test(lower)) return 'Rusya';
+  if (/\bjaponya\b|\bjapan\b/.test(lower)) return 'Japonya';
+  if (/\bçin\b|\bchin\b|\bchina\b/.test(lower)) return 'Çin';
   return '';
+}
+
+// Normalize country names to short form for card display
+function normalizeCountryName(name) {
+  if (!name) return '';
+  const n = name.trim();
+  // Direct mapping
+  const map = {
+    'Osmanlı İmparatorluğu': 'Osmanlı İmp.',
+    'Osmanlı İmp.': 'Osmanlı İmp.',
+    'Türkiye Cumhuriyeti': 'T.C.',
+    'Birleşik Krallık': 'UK',
+    'Almanya': 'Almanya',
+    'ABD': 'ABD',
+    'Fransa': 'Fransa',
+    'İtalya': 'İtalya',
+    'Rusya': 'Rusya',
+    'Japonya': 'Japonya',
+    'Çin': 'Çin',
+  };
+  if (map[n]) return map[n];
+  // Fuzzy: check if it contains a known country name
+  for (const [full, short] of Object.entries(map)) {
+    if (n.includes(full) || n.toLowerCase().includes(full.toLowerCase())) return short;
+  }
+  return n;
 }
 // Turkish-safe uppercase: i→I, ı→I, ğ→Ğ, ü→Ü, ş→Ş, ö→Ö, ç→Ç
 function toEnUpper(str) {
@@ -275,16 +313,39 @@ function parseDiecastInfo(file, html) {
     else scale = detectScale(brand, model) || '1:64';
   }
 
-  // 5. Year
-  let year = tableData['Üretim Yılı'] || tableData['Dönem'] || tableData['Üretim Yılı (yaklaşık)'] || tableData['Yıl'] || file?._year || '';
-  if (year && year.length > 25) {
-    const ym = year.match(/\b(19|20)\d{2}\b/);
-    if (ym) year = ym[0];
+  // 5a. Production Year (oyuncak üretim yılı)
+  let productionYear = tableData['Üretim Yılı'] || tableData['Dönem'] || tableData['Üretim Yılı (yaklaşık)'] || tableData['Yıl'] || file?._productionYear || file?._year || '';
+  if (productionYear && productionYear.length > 25) {
+    const ym = productionYear.match(/\b(19|20)\d{2}\b/);
+    if (ym) productionYear = ym[0];
   }
-  if (!year) {
+  if (!productionYear) {
     const searchTexts = [file?._title || '', file?.name || '', file?.description || ''].join(' ');
-    year = extractYearFromText(searchTexts);
+    productionYear = extractYearFromText(searchTexts);
   }
+
+  // 5b. Model Year (araç model yılı — model adından çıkarılır)
+  let modelYear = '';
+  // Try from model name: e.g. "1957 Ford Custom 300" → 1957
+  const modelYearMatch = model.match(/^\b((?:18|19|20)\d{2})\b/);
+  if (modelYearMatch) {
+    modelYear = modelYearMatch[1];
+  } else {
+    // Also try: "Ford Mustang 1965" or "BMW M1 (1978-1981)"
+    const modelYearFallback = model.match(/\b((?:18|19|20)\d{2})\b/);
+    if (modelYearFallback) modelYear = modelYearFallback[1];
+  }
+  // Fallback: try table data fields for model year
+  if (!modelYear) {
+    modelYear = tableData['Model Yılı'] || tableData['Araç Yılı'] || file?._modelYear || '';
+    if (modelYear && modelYear.length > 10) {
+      const ym = modelYear.match(/\b(19|20)\d{2}\b/);
+      if (ym) modelYear = ym[0];
+    }
+  }
+
+  // Use productionYear as the main 'year' for backward compat
+  const year = productionYear;
 
   // 6. Origin
   let origin = tableData['Menşei'] || tableData['Üretim Yeri'] || tableData['Ülke'] || file?._origin || '';
@@ -306,7 +367,7 @@ function parseDiecastInfo(file, html) {
     material = 'Diecast Metal';
   }
 
-  return { code, brand, model, scale, year, origin, series, material };
+  return { code, brand, model, scale, year, origin, series, material, modelYear, productionYear };
 }
 
 // ─── MOCK DATA ─────────────────────────────────────────────────────────────
@@ -646,7 +707,8 @@ function extractStampInfoFromHtml(html) {
   subtitle = stripPatterns(subtitle);
 
   // ── 5. NOMINAL DEĞER: scan all visible text for currency patterns ──
-  const currencyPattern = /\b(\d+[.,]?\d*)\s*(kuruş|kurus|para|lira|₺|\bTL\b|sent|cente?|penny|pence|pfenning|groschen|shilling|franc|mark|rupi|yen|yuan|won|dinar|ruble|real|peso|riyal|cents?|dollars?|euro?)\b/i;
+  // Use \s+ instead of \b for Turkish chars (kuruş, etc.) — \b fails with non-ASCII
+  const currencyPattern = /(?:^|\s|:)(\d+[.,]?\d*)\s+(kuruş|kurus|para|lira|₺|TL\b|sent|cente?|penny|pence|pfenning|groschen|shilling|franc|mark|rupi|yen|yuan|won|dinar|ruble|real|peso|riyal|cents?|dollars?|euro?)/i;
   // Try from title first
   if (title) {
     const cm = title.match(currencyPattern);
@@ -684,6 +746,16 @@ function extractStampInfoFromHtml(html) {
   if (!nominalDeger) {
     const denomMatch = allText.match(/(?:değer|deger|nominal|value|bedel|kiymet|fiyat|tutar|birim)[:\s]+([^,;\n]{3,40})/i);
     if (denomMatch) nominalDeger = denomMatch[1].trim();
+  }
+  // Fallback: scan div elements with class containing 'nominal' or 'value'
+  if (!nominalDeger) {
+    const divs = doc.querySelectorAll('div[class*="nominal"], div[class*="value"], span[class*="nominal"], span[class*="value"]');
+    for (const div of divs) {
+      const t = div.textContent.trim();
+      const cm = t.match(currencyPattern);
+      if (cm && cm[0].length < 40) { nominalDeger = cm[0].trim(); break; }
+      else if (t.length < 40 && /kuruş|kurus|para|lira|TL/i.test(t)) { nominalDeger = t; break; }
+    }
   }
   // Clean up nominal value: strip parenthetical content like "(G..." from "Değer 6 Kuruş (G..."
   if (nominalDeger) {
@@ -769,9 +841,17 @@ function extractStampInfoFromHtml(html) {
   }
   // Fallback: scan table cells
   if (!pulTipi) {
-    const tableTip = findTableValue('pul tipi', 'tip', 'type', 'tür', 'tur', 'kategori', 'category');
+    const tableTip = findTableValue('pul tipi', 'tip', 'type', 'tür', 'tur', 'kategori', 'category', 'seri', 'konu', 'nominal değer', 'nominal');
     if (tableTip) {
-      pulTipi = tableTip;
+      // Try to extract stamp type from the table value
+      for (const pat of stampTypePatterns) {
+        const tm = tableTip.toLowerCase().match(pat);
+        if (tm) { pulTipi = tm[1] || tm[0]; break; }
+      }
+      // If no pattern matched, use the raw value if it looks like a stamp type
+      if (!pulTipi && /^(posta|damga|vergi|harç|anma|konulu|tematik|hatıra|resim|adi|resmi|derleme|emisyon|blok)/i.test(tableTip)) {
+        pulTipi = tableTip;
+      }
     }
   }
   if (!pulTipi) {
@@ -998,10 +1078,13 @@ function extractStampInfoFromHtml(html) {
     else if (isDamgasiz) durum = 'Damgasız';
   }
 
+  // Normalize country name for consistent display
+  const normalizedCountry = normalizeCountryName(country);
+
   return {
-    title, subtitle, image, code, country, year,
+    title, subtitle, image, code, country: normalizedCountry || country, year,
     denomination: nominalDeger, typeInfo: pulTipi,
-    katalogNo: code, ulke: country, basimYili: year, basimYeri,
+    katalogNo: code, ulke: normalizedCountry || country, basimYili: year, basimYeri,
     nominalDeger, pulTipi, ozet, durum
   };
 }
@@ -1213,7 +1296,7 @@ function extractPlakInfoFromHtml(html) {
   return { title, subtitle, image, code, artist, album, plakSirketi, katalogNo, year, format, country, genre, pressing, matrixNo, condition };
 }
 const DB_NAME = 'PullukDB';
-const DB_VERSION = 9; // Incremented to clear stale cache & fix country extraction
+const DB_VERSION = 10; // v10: clear stale cache, fix country labels & mobile scroll
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const STORE_NAME = 'fileCache';
 
@@ -1284,6 +1367,8 @@ async function getFileFromCache(file) {
       file._origin = cached._origin;
       file._series = cached._series;
       file._material = cached._material;
+      file._modelYear = cached._modelYear;
+      file._productionYear = cached._productionYear;
       return true;
     }
   } catch (e) {
@@ -1330,7 +1415,9 @@ async function saveFileToCache(file) {
       _scale: file._scale,
       _origin: file._origin,
       _series: file._series,
-      _material: file._material
+      _material: file._material,
+      _modelYear: file._modelYear,
+      _productionYear: file._productionYear
     };
     store.put(data);
   } catch (e) {
@@ -1359,19 +1446,23 @@ async function processPreviewQueue() {
       const apiKey = CONFIG.GOOGLE_API_KEY.trim();
 
       if (file._title) {
-        // Re-extract missing fields from cached htmlContent
+        // Re-extract and normalize missing/outdated fields from cached htmlContent
         if (file._htmlContent) {
           const reExtracted = extractStampInfoFromHtml(file._htmlContent);
           let changed = false;
+          // Always re-normalize country from htmlContent (may be stale in cache)
+          if (reExtracted.country) {
+            const normalized = normalizeCountryName(reExtracted.country);
+            if (file._country !== normalized) { file._country = normalized; changed = true; }
+            if (file._ulke !== normalized) { file._ulke = normalized; changed = true; }
+          }
           if (!file._basimYeri && reExtracted.basimYeri) { file._basimYeri = reExtracted.basimYeri; changed = true; }
-          if (!file._country && reExtracted.country) { file._country = reExtracted.country; changed = true; }
           if (!file._year && reExtracted.year) { file._year = reExtracted.year; changed = true; }
           if (!file._nominalDeger && reExtracted.nominalDeger) { file._nominalDeger = reExtracted.nominalDeger; changed = true; }
           if (!file._pulTipi && reExtracted.pulTipi) { file._pulTipi = reExtracted.pulTipi; changed = true; }
           if (!file._durum && reExtracted.durum) { file._durum = reExtracted.durum; changed = true; }
           if (!file._image && reExtracted.image) { file._image = reExtracted.image; changed = true; }
           if (!file._code && reExtracted.code) { file._code = reExtracted.code; changed = true; }
-          if (!file._ulke && reExtracted.ulke) { file._ulke = reExtracted.ulke; changed = true; }
           if (!file._basimYili && reExtracted.basimYili) { file._basimYili = reExtracted.basimYili; changed = true; }
           if (!file._subtitle && reExtracted.subtitle) { file._subtitle = reExtracted.subtitle; changed = true; }
           if (changed) saveFileToCache(file);
@@ -1412,19 +1503,23 @@ async function processPreviewQueue() {
       }
 
       if (!file._title && await getFileFromCache(file)) {
-        // Re-extract missing fields from cached htmlContent
+        // Re-extract and normalize fields from cached htmlContent
         if (file._htmlContent) {
           const reExtracted = extractStampInfoFromHtml(file._htmlContent);
           let changed = false;
+          // Always re-normalize country from htmlContent (may be stale in cache)
+          if (reExtracted.country) {
+            const normalized = normalizeCountryName(reExtracted.country);
+            if (file._country !== normalized) { file._country = normalized; changed = true; }
+            if (file._ulke !== normalized) { file._ulke = normalized; changed = true; }
+          }
           if (!file._basimYeri && reExtracted.basimYeri) { file._basimYeri = reExtracted.basimYeri; changed = true; }
-          if (!file._country && reExtracted.country) { file._country = reExtracted.country; changed = true; }
           if (!file._year && reExtracted.year) { file._year = reExtracted.year; changed = true; }
           if (!file._nominalDeger && reExtracted.nominalDeger) { file._nominalDeger = reExtracted.nominalDeger; changed = true; }
           if (!file._pulTipi && reExtracted.pulTipi) { file._pulTipi = reExtracted.pulTipi; changed = true; }
           if (!file._durum && reExtracted.durum) { file._durum = reExtracted.durum; changed = true; }
           if (!file._image && reExtracted.image) { file._image = reExtracted.image; changed = true; }
           if (!file._code && reExtracted.code) { file._code = reExtracted.code; changed = true; }
-          if (!file._ulke && reExtracted.ulke) { file._ulke = reExtracted.ulke; changed = true; }
           if (!file._basimYili && reExtracted.basimYili) { file._basimYili = reExtracted.basimYili; changed = true; }
           if (!file._subtitle && reExtracted.subtitle) { file._subtitle = reExtracted.subtitle; changed = true; }
           if (changed) saveFileToCache(file);
@@ -1456,6 +1551,8 @@ async function processPreviewQueue() {
           file._origin = diecastData.origin;
           file._series = diecastData.series;
           file._material = diecastData.material;
+          file._modelYear = diecastData.modelYear;
+          file._productionYear = diecastData.productionYear;
           if (diecastData.code) file._code = diecastData.code;
           if (diecastData.model) file._title = diecastData.model;
           saveFileToCache(file);
@@ -1534,6 +1631,8 @@ async function processPreviewQueue() {
           file._origin = diecastData.origin;
           file._series = diecastData.series;
           file._material = diecastData.material;
+          file._modelYear = diecastData.modelYear;
+          file._productionYear = diecastData.productionYear;
           if (diecastData.code) file._code = diecastData.code;
           if (diecastData.model) file._title = diecastData.model;
         }
@@ -1556,6 +1655,10 @@ async function processPreviewQueue() {
 
 function updateCardUI(item) {
   const { file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, isDiecast, brandEl, yearEl, badgeBrandEl, badgeYearEl, badgeCodeEl, h3El, koleksiyonEl, ulkeEl, yilEl, nominalEl, tipiEl, durumEl, galleryId } = item;
+
+  // Always normalize country for consistent display
+  if (file._country) file._country = normalizeCountryName(file._country);
+  if (file._ulke) file._ulke = normalizeCountryName(file._ulke);
 
   // Standard PDF card updates
   if (titleEl) titleEl.textContent = file._title;
@@ -1592,26 +1695,7 @@ function updateCardUI(item) {
     const nominalValue = isKarma ? titleText : (file._nominal || file._nominalDeger || '');
     const tipiValue = isKarma ? subtitleText : (file._type || file._pulTipi || '');
 
-    const abbrevCountry = (country === 'Türkiye Cumhuriyeti')
-      ? 'Türkiye Cumhuriyeti'
-      : country
-        .replace(/İmparatorluğu/gi, 'İmp.')
-        .replace(/Cumhuriyeti/gi, 'Cumh.')
-        .replace(/Devleti/gi, 'Dev.')
-        .replace(/Krallığı/gi, 'Kral.')
-        .replace(/Sultanlığı/gi, 'Sult.')
-        .replace(/Emirliği/gi, 'Emir.')
-        .replace(/Prensliği/gi, 'Prens.')
-        .replace(/Kolonisi/gi, 'Kol.')
-        .replace(/Bölgesi/gi, 'Böl.')
-        .replace(/Kıtasal/gi, 'Kıt.')
-        .replace(/Kara\s+Kıta/gi, 'Kara Kıta')
-        .replace(/United\s+States/gi, 'USA')
-        .replace(/United\s+Kingdom/gi, 'UK')
-        .replace(/Soviet\s+Union/gi, 'SSCB')
-        .replace(/Czechoslovakia/gi, 'Çek.')
-        .replace(/Yugoslavia/gi, 'Yugo.')
-        .trim();
+    const abbrevCountry = normalizeCountryName(country);
 
     // Populate 5-field card elements
     if (koleksiyonEl) {
@@ -1643,7 +1727,7 @@ function updateCardUI(item) {
   // Diecast-specific updates: re-parse brand/year/model/scale/origin/material/series from extracted HTML data
   if (isDiecast && card) {
     const diecastData = parseDiecastInfo(file, file._htmlContent);
-    const { brand, model, scale, year, origin, series, material, code } = diecastData;
+    const { brand, model, scale, year, origin, series, material, code, modelYear, productionYear } = diecastData;
 
     // Corner floating badge
     if (brandEl) brandEl.textContent = brand;
@@ -1661,7 +1745,8 @@ function updateCardUI(item) {
       else { badgeScaleEl.style.display = 'none'; }
     }
     if (badgeYearEl) {
-      if (year) { badgeYearEl.textContent = year; badgeYearEl.style.display = ''; }
+      const displayYear = modelYear || year;
+      if (displayYear) { badgeYearEl.textContent = displayYear; badgeYearEl.style.display = ''; }
       else { badgeYearEl.style.display = 'none'; }
     }
     const badgeCodeElActual = badgeCodeEl || card.querySelector('.diecast-badge--code');
@@ -1684,8 +1769,11 @@ function updateCardUI(item) {
     const fieldBrand = card.querySelector('.diecast-field--brand .diecast-field__value');
     if (fieldBrand) fieldBrand.textContent = brand || '—';
 
+    const fieldModelYear = card.querySelector('.diecast-field--model-year .diecast-field__value');
+    if (fieldModelYear) fieldModelYear.textContent = modelYear || '—';
+
     const fieldYear = card.querySelector('.diecast-field--year .diecast-field__value');
-    if (fieldYear) fieldYear.textContent = year || '—';
+    if (fieldYear) fieldYear.textContent = productionYear || year || '—';
 
     const fieldOrigin = card.querySelector('.diecast-field--origin .diecast-field__value');
     if (fieldOrigin) fieldOrigin.textContent = origin || '—';
@@ -1804,7 +1892,13 @@ class GalleryManager {
 
     // 1. Instant loading from precompiled collection data
     if (window.PULLUK_COLLECTION_DATA && window.PULLUK_COLLECTION_DATA[this.id]) {
-      this.allFiles = window.PULLUK_COLLECTION_DATA[this.id].map(p => ({ ...p }));
+      this.allFiles = window.PULLUK_COLLECTION_DATA[this.id].map(p => {
+        const f = { ...p };
+        // Normalize country on load
+        if (f._country) f._country = normalizeCountryName(f._country);
+        if (f._ulke) f._ulke = normalizeCountryName(f._ulke);
+        return f;
+      });
       this.updateFilterButtonsDynamically();
       this.filteredFiles = [...this.allFiles];
       this.renderGallery();
@@ -1825,18 +1919,34 @@ class GalleryManager {
       if (driveFiles && driveFiles.length > 0) {
         console.log(`[PULLUK] load() fetched ${driveFiles.length} files from Drive for ${this.id}`);
         const fileMap = new Map();
-        this.allFiles.forEach(f => fileMap.set(f.id, f));
+        const nameMap = new Map();
+        this.allFiles.forEach(f => {
+          fileMap.set(f.id, f);
+          // Also index by normalized file name (without extension) to catch re-uploaded files
+          const baseName = (f.name || '').replace(/\.html?$/i, '').trim();
+          if (baseName) nameMap.set(baseName, f);
+        });
 
         driveFiles.forEach(df => {
-          if (!fileMap.has(df.id)) {
-            this.allFiles.push(df);
-          } else {
-            const existing = fileMap.get(df.id);
+          const existingById = fileMap.get(df.id);
+          const baseName = (df.name || '').replace(/\.html?$/i, '').trim();
+          const existingByName = baseName ? nameMap.get(baseName) : null;
+          const existing = existingById || existingByName;
+
+          if (existing) {
+            // Merge: keep precompiled fields, overlay Drive fields
             Object.assign(existing, df, {
               _title: existing._title || df._title,
               _image: existing._image || df._image,
               _code: existing._code || df._code
             });
+            // If matched by name but not by id, update id to the new Drive id
+            if (!existingById && existingByName) {
+              fileMap.delete(existingByName.id);
+              fileMap.set(df.id, existing);
+            }
+          } else {
+            this.allFiles.push(df);
           }
         });
 
@@ -2064,26 +2174,7 @@ class GalleryManager {
     const codeBadge = buildStampCodeBadge(code, country, year);
 
     // Abbreviate country for card display
-    const abbrevCountry = (country === 'Türkiye Cumhuriyeti')
-      ? 'Türkiye Cumhuriyeti'
-      : country
-        .replace(/İmparatorluğu/gi, 'İmp.')
-        .replace(/Cumhuriyeti/gi, 'Cumh.')
-        .replace(/Devleti/gi, 'Dev.')
-        .replace(/Krallığı/gi, 'Kral.')
-        .replace(/Sultanlığı/gi, 'Sult.')
-        .replace(/Emirliği/gi, 'Emir.')
-        .replace(/Prensliği/gi, 'Prens.')
-        .replace(/Kolonisi/gi, 'Kol.')
-        .replace(/Bölgesi/gi, 'Böl.')
-        .replace(/Kıtasal/gi, 'Kıt.')
-        .replace(/Kara\s+Kıta/gi, 'Kara Kıta')
-        .replace(/United\s+States/gi, 'USA')
-        .replace(/United\s+Kingdom/gi, 'UK')
-        .replace(/Soviet\s+Union/gi, 'SSCB')
-        .replace(/Czechoslovakia/gi, 'Çek.')
-        .replace(/Yugoslavia/gi, 'Yugo.')
-        .trim();
+    const abbrevCountry = normalizeCountryName(country);
 
     const initialTitle = file._title || (file.isMock ? file.name.replace(/\.(pdf|html|htm)$/i, '') : file.name.replace(/\.(html|htm|pdf)$/i, ''));
     const initialSub = file._subtitle || '';
@@ -2339,7 +2430,7 @@ class GalleryManager {
     const hasImage = Boolean(file._image);
 
     const diecastData = parseDiecastInfo(file, file._htmlContent);
-    const { brand, year, model, scale, origin, series, material, code } = diecastData;
+    const { brand, year, model, scale, origin, series, material, code, modelYear, productionYear } = diecastData;
 
     const card = document.createElement('div');
     card.className = 'diecast-card reveal';
@@ -2386,9 +2477,13 @@ class GalleryManager {
             <span class="diecast-field__label">Marka</span>
             <span class="diecast-field__value">${brand || '—'}</span>
           </div>
+          <div class="diecast-field diecast-field--model-year">
+            <span class="diecast-field__label">Model Yılı</span>
+            <span class="diecast-field__value">${modelYear || '—'}</span>
+          </div>
           <div class="diecast-field diecast-field--year">
             <span class="diecast-field__label">Üretim Yılı</span>
-            <span class="diecast-field__value">${year || '—'}</span>
+            <span class="diecast-field__value">${productionYear || year || '—'}</span>
           </div>
           <div class="diecast-field diecast-field--origin">
             <span class="diecast-field__label">Menşei</span>
@@ -2942,6 +3037,20 @@ async function initPreviewCarousel() {
 
 // ─── MAIN INIT ─────────────────────────────────────────────────────────────
 async function init() {
+  // Force scroll to top on page load (fixes mobile refresh jumping to last collection)
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.scrollTo(0, 0);
+
+  // Clear stale localStorage cache entries for labels
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('pulluk_file_') || key.startsWith('pulluk_label_') || key.startsWith('pulluk_card_'))) {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch (_e) { }
+
   // Theme & nav must init immediately (don't await preview)
   initTheme();
   initViewer();
