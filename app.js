@@ -2942,7 +2942,7 @@ async function initPreviewCarousel() {
 
 // ─── MAIN INIT ─────────────────────────────────────────────────────────────
 async function init() {
-  await initPreviewCarousel();
+  // Theme & nav must init immediately (don't await preview)
   initTheme();
   initViewer();
   initMobileNav();
@@ -2952,6 +2952,8 @@ async function init() {
   initCounters();
   initBackToTop();
 
+  document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+
   if (window.location.protocol === 'file:') {
     console.warn('[PULLUK] file:// protocol detected — alt=media requests may be blocked by CORS. Use a local server: python -m http.server 8080');
     const banner = document.createElement('div');
@@ -2959,8 +2961,6 @@ async function init() {
     banner.innerHTML = '⚠ Tarayıcıdan doğrudan açtınız — CORS hatası olabilir. Terminalden <code>python -m http.server 8080</code> çalıştırıp <a href="http://localhost:8080" style="color:#fff;text-decoration:underline">http://localhost:8080</a> adresini açın.';
     document.body.prepend(banner);
   }
-
-  document.getElementById('themeBtn').addEventListener('click', toggleTheme);
 
   const galleries = [
     new GalleryManager('galeri', CONFIG.FOLDERS['galeri']),
@@ -2972,6 +2972,9 @@ async function init() {
 
   // Load galleries
   galleries.forEach(g => g.load());
+
+  // Load preview carousel in background (non-blocking)
+  initPreviewCarousel().catch(err => console.warn('[PULLUK] preview carousel init failed', err));
 }
 
 if (document.readyState === 'loading') {
