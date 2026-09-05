@@ -1213,7 +1213,7 @@ function extractPlakInfoFromHtml(html) {
   return { title, subtitle, image, code, artist, album, plakSirketi, katalogNo, year, format, country, genre, pressing, matrixNo, condition };
 }
 const DB_NAME = 'PullukDB';
-const DB_VERSION = 8; // Incremented to clear stale HTML cache & support diecast fields
+const DB_VERSION = 9; // Incremented to clear stale cache & fix country extraction
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const STORE_NAME = 'fileCache';
 

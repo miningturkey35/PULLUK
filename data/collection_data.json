@@ -904,6 +904,40 @@
       "_katalogNo": "Pick P-203 · TBB B281",
       "webViewLink": "https://drive.google.com/file/d/1qtLA9X7-z8fZApZHcRqUmwblPsC8Ctn3/view?usp=drivesdk",
       "modifiedTime": "2026-09-04T09:28:26.939Z"
+    },
+    {
+      "id": "1uGM_wyBrZaNsDX6wsfhupkl0Qaj8uE1s",
+      "name": "MGB002.html",
+      "mimeType": "text/html",
+      "_title": "50.000 Türk Lirası",
+      "_subtitle": "",
+      "_image": "",
+      "_code": "MGB002",
+      "_country": "Türkiye Cumhuriyeti",
+      "_year": "1989",
+      "_nominalDeger": "50.000 TL",
+      "_pulTipi": "E7 Emisyon Grubu — I. Seri",
+      "_durum": "Çil (Mint)",
+      "_katalogNo": "MGB002",
+      "webViewLink": "https://drive.google.com/file/d/1uGM_wyBrZaNsDX6wsfhupkl0Qaj8uE1s/view?usp=drivesdk",
+      "modifiedTime": "2026-09-04T22:31:09.455Z"
+    },
+    {
+      "id": "1Ad9Qr5QcrksKR4Q8reH6DsN02TxVYAGG",
+      "name": "MGB003.html",
+      "mimeType": "text/html",
+      "_title": "50.000 Türk Lirası",
+      "_subtitle": "",
+      "_image": "",
+      "_code": "MGB003",
+      "_country": "Türkiye Cumhuriyeti",
+      "_year": "1989",
+      "_nominalDeger": "50.000 TL",
+      "_pulTipi": "E7 Emisyon Grubu — I. Seri",
+      "_durum": "Çil (Mint)",
+      "_katalogNo": "MGB003",
+      "webViewLink": "https://drive.google.com/file/d/1Ad9Qr5QcrksKR4Q8reH6DsN02TxVYAGG/view?usp=drivesdk",
+      "modifiedTime": "2026-09-04T22:31:10.036Z"
     }
   ],
   "allother": [
