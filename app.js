@@ -1777,6 +1777,7 @@ class GalleryManager {
 
     if (this.els.searchBox) {
       this.els.searchBox.addEventListener('input', () => {
+        this._userInteracted = true;
         this.searchQuery = this.els.searchBox.value;
         this.applyFilters();
       });
@@ -1786,6 +1787,7 @@ class GalleryManager {
       this.els.filterRow.addEventListener('click', e => {
         const btn = e.target.closest('.filter-btn');
         if (!btn) return;
+        this._userInteracted = true;
         this.els.filterRow.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('is-active'));
         btn.classList.add('is-active');
         this.currentFilter = btn.dataset.filter;
@@ -2480,8 +2482,10 @@ class GalleryManager {
     this.els.grid.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
     this.renderPagination(totalPages);
 
-    // Scroll to gallery top after page change (prevents mobile scroll jump)
-    if (this._didRender) {
+    // Scroll to gallery top only after user interaction (not initial load)
+    if (this._didRender && !this._initialLoadDone) {
+      this._initialLoadDone = true;
+    } else if (this._didRender && this._userInteracted) {
       const section = document.getElementById(this.id);
       if (section) {
         const offset = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--nav-h') || '66');
@@ -2503,6 +2507,7 @@ class GalleryManager {
     prevBtn.disabled = this.currentPage === 1;
     prevBtn.addEventListener('click', () => {
       if (this.currentPage > 1) {
+        this._userInteracted = true;
         this.currentPage--;
         this.renderGallery();
       }
@@ -2515,6 +2520,7 @@ class GalleryManager {
       btn.textContent = i;
       btn.addEventListener('click', () => {
         if (this.currentPage !== i) {
+          this._userInteracted = true;
           this.currentPage = i;
           this.renderGallery();
         }
@@ -2528,6 +2534,7 @@ class GalleryManager {
     nextBtn.disabled = this.currentPage === totalPages;
     nextBtn.addEventListener('click', () => {
       if (this.currentPage < totalPages) {
+        this._userInteracted = true;
         this.currentPage++;
         this.renderGallery();
       }
