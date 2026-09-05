@@ -340,7 +340,7 @@ function parseDiecastInfo(file, html) {
   }
   // Fallback: try table data fields for model year
   if (!modelYear) {
-    modelYear = tableData['Model Yılı'] || tableData['Araç Yılı'] || file?._modelYear || '';
+    modelYear = tableData['Model Yılı'] || tableData['Araç Yılı'] || tableData['Dönem'] || file?._modelYear || '';
     if (modelYear && modelYear.length > 10) {
       const ym = modelYear.match(/\b(19|20)\d{2}\b/);
       if (ym) modelYear = ym[0];
@@ -2091,11 +2091,14 @@ class GalleryManager {
   buildFilterButtons(categories) {
     if (!this.els.filterRow) return;
 
+    // Remove all existing filter buttons except 'all'
     const existingBtns = Array.from(this.els.filterRow.querySelectorAll('.filter-btn'));
-    const existingTexts = existingBtns.map(b => b.textContent.trim());
+    existingBtns.forEach(btn => {
+      if (btn.dataset.filter !== 'all') btn.remove();
+    });
 
+    // Rebuild buttons from current categories
     categories.forEach(cat => {
-      if (existingTexts.includes(cat)) return;
       const catLower = cat.toLocaleLowerCase('tr');
       const btn = document.createElement('button');
       btn.className = 'filter-btn';
@@ -2104,26 +2107,7 @@ class GalleryManager {
       if (this.currentFilter === catLower) {
         btn.classList.add('is-active');
       }
-
-      // Find correct insertion point for sorting
-      const buttons = Array.from(this.els.filterRow.querySelectorAll('.filter-btn'));
-      let inserted = false;
-      for (let i = 1; i < buttons.length; i++) { // Skip 0 'all'
-        const numBtn = parseInt(buttons[i].textContent);
-        const numCat = parseInt(cat);
-        if (!isNaN(numBtn) && !isNaN(numCat) && numBtn > numCat) {
-          this.els.filterRow.insertBefore(btn, buttons[i]);
-          inserted = true;
-          break;
-        } else if (isNaN(numBtn) && buttons[i].textContent.localeCompare(cat) > 0) {
-          this.els.filterRow.insertBefore(btn, buttons[i]);
-          inserted = true;
-          break;
-        }
-      }
-      if (!inserted) {
-        this.els.filterRow.appendChild(btn);
-      }
+      this.els.filterRow.appendChild(btn);
     });
   }
 
