@@ -131,7 +131,10 @@ function extractCountryFromText(text) {
   // Check more specific terms first to avoid false matches
   for (const c of STAMP_COUNTRIES) {
     for (const kw of c.keywords) {
-      if (lower.includes(kw)) return c.name;
+      // Use word-boundary matching to avoid false positives like 'uk ' matching inside 'çocuk '
+      const kwEscaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const kwRegex = new RegExp('\\b' + kwEscaped, 'i');
+      if (kwRegex.test(lower)) return c.name;
     }
   }
   // Additional fallback patterns
