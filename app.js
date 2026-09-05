@@ -2887,10 +2887,9 @@ async function initPreviewCarousel() {
 
   if (allUrls.length === 0) return;
 
-  // Pick gridCount unique shuffled URLs (cycle if more slots than sources)
+  // Pick gridCount unique shuffled URLs (no duplicates)
   let shuffled = [...allUrls].sort(() => Math.random() - 0.5);
-  while (shuffled.length < gridCount) shuffled.push(...shuffled.slice(0, gridCount - shuffled.length));
-  const usedUrls = shuffled.slice(0, gridCount);
+  const usedUrls = shuffled.slice(0, Math.min(gridCount, shuffled.length));
   const visibleSet = new Set(usedUrls);
   let hiddenUrls = allUrls.filter(u => !visibleSet.has(u));
 
@@ -2912,14 +2911,19 @@ async function initPreviewCarousel() {
   }, 5000);
 
   function swapImage(imgEl) {
+    const oldUrl = imgEl.getAttribute('src');
     if (hiddenUrls.length === 0) {
+      // Rebuild pool from all URLs not currently visible
       const currentSet = new Set(Array.from(imgs).map(e => e.getAttribute('src')));
-      hiddenUrls.push(...allUrls.filter(u => !currentSet.has(u)));
-      if (hiddenUrls.length === 0) hiddenUrls.push(...allUrls);
+      hiddenUrls = allUrls.filter(u => !currentSet.has(u));
+      if (hiddenUrls.length === 0) return; // nothing to swap
     }
     const newIdx = Math.floor(Math.random() * hiddenUrls.length);
     const newUrl = hiddenUrls.splice(newIdx, 1)[0];
-    hiddenUrls.push(imgEl.getAttribute('src'));
+    // Add old URL back only if not already in hidden pool
+    if (!hiddenUrls.includes(oldUrl)) {
+      hiddenUrls.push(oldUrl);
+    }
     imgEl.style.opacity = '0';
     setTimeout(() => { imgEl.src = newUrl; imgEl.style.opacity = '1'; }, 250);
   }
