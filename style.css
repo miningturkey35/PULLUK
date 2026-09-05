@@ -975,22 +975,12 @@ html[data-theme="dark"] .plak-field-title .pdf-card-field__value {
   color: var(--gold);
 }
 
-/* Koleksiyon No styling */
+/* Koleksiyon No — normal field (no highlight) */
 .plak-field-collection .pdf-card-field__value {
   font-family: var(--font-display);
   font-size: .72rem;
-  font-weight: 600;
-  letter-spacing: .04em;
-  color: var(--azure);
-  background: var(--azure-light);
-  padding: 2px 8px;
-  border-radius: 4px;
-  display: inline-block;
+  font-weight: 500;
   white-space: nowrap !important;
-}
-html[data-theme="dark"] .plak-field-collection .pdf-card-field__value {
-  color: var(--gold);
-  background: var(--gold-light);
 }
 
 /* Allow text wrapping for plak card values */

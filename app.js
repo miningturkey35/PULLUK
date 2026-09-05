@@ -1815,7 +1815,6 @@ function updateCardUI(item) {
      // Update all plak-specific fields
      const plakFields = [
        { el: 'plak-field-title', value: file._album || '' },
-       { el: 'plak-field-collection', value: fileNameNoExt || '' },
        { el: 'plak-field-artist', value: file._artist || '' },
        { el: 'plak-field-label', value: file._plakSirketi || '' },
        { el: 'plak-field-genre', value: file._genre || '' },
@@ -1823,7 +1822,8 @@ function updateCardUI(item) {
        { el: 'plak-field-year', value: file._year || '' },
        { el: 'plak-field-format', value: file._format || '' },
        { el: 'plak-field-pressing', value: file._pressing || '' },
-       { el: 'plak-field-matrix', value: file._matrixNo || '' }
+       { el: 'plak-field-matrix', value: file._matrixNo || '' },
+       { el: 'plak-field-collection', value: fileNameNoExt || '' }
      ];
      
      plakFields.forEach(field => {
@@ -2354,10 +2354,6 @@ class GalleryManager {
             <span class="pdf-card-field__label">Albüm / Plak</span>
             <span class="pdf-card-field__value pdf-card-title-value">${albumName || initialTitle || '—'}</span>
           </div>
-          <div class="pdf-card-field plak-field-collection">
-            <span class="pdf-card-field__label">Koleksiyon No</span>
-            <span class="pdf-card-field__value">${fileNameNoExt || '—'}</span>
-          </div>
           <div class="pdf-card-field plak-field-artist">
             <span class="pdf-card-field__label">Sanatçı</span>
             <span class="pdf-card-field__value">${artist || '—'}</span>
@@ -2389,6 +2385,10 @@ class GalleryManager {
           <div class="pdf-card-field plak-field-matrix">
             <span class="pdf-card-field__label">Matriks No</span>
             <span class="pdf-card-field__value">${matrixNo || '—'}</span>
+          </div>
+          <div class="pdf-card-field plak-field-collection">
+            <span class="pdf-card-field__label">Koleksiyon No</span>
+            <span class="pdf-card-field__value">${fileNameNoExt || '—'}</span>
           </div>
         </div>
       </div>
