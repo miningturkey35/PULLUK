@@ -12,7 +12,8 @@ const FOLDERS = {
   'diecast': '1SDvXKhh92xPO1Jd-wZccqDdxGy8Ghygg',
   'plak': '13FPeN7gTD3SjbUB6ENIfaJ4OVa6rYqd0',
   'banknot': '1ffJ9xKTsrKpaM3OcJ0fRU4ggcRRmKBdL',
-  'allother': '1mmPvVEreFr0cbXjX3Ds21FOsZI9cRaH0'
+  'allother': '1mmPvVEreFr0cbXjX3Ds21FOsZI9cRaH0',
+  'legoverse': '1cJpRJ_B7wbHOJ69oYzI6JYWQdbabkLx4'
 };
 
 // Normalize country names to short, consistent form
@@ -269,6 +270,20 @@ function extractAllInfo(fileId, fileName, galleryType, html) {
     const banknoteYearMatch = banknoteYearVal.match(/\b((?:18|19|20)\d{2})\b/);
     if (banknoteYearMatch) data._year = banknoteYearMatch[1];
     data._year = data._year || '1989';
+  } else if (galleryType === 'legoverse') {
+    data._setNo = find('lego set no', 'set no', 'set numarası') || '';
+    data._setName = find('set adı', 'set name') || rawH1 || '';
+    data._theme = find('tema / theme', 'tema', 'theme') || '';
+    data._subTheme = find('alt tema / subtheme', 'alt tema') || '';
+    data._pieceCount = find('parça sayısı', 'parça') || '';
+    data._minifigCount = find('minifigür sayısı', 'minifigür') || '';
+    data._rarity = find('nadirlik derecesi', 'nadirlik') || '';
+    data._setStatus = find('ürün durumu', 'set durumu') || '';
+    data._condition = find('tamlık oranı', 'durum', 'condition') || '';
+    data._rrp = find('rrp', 'orijinal fiyat') || '';
+    data._estValue = find('tahmini değer', 'güncel tahmini değer') || '';
+    data._title = data._setName || data._setNo || fileName.replace(/\.html$/i, '');
+    data._subtitle = data._theme ? (data._subTheme ? `${data._theme} — ${data._subTheme}` : data._theme) : '';
   } else if (galleryType === 'allother') {
     if (fileName.includes('MGD001')) {
       data._title = 'Akhenaten & Nefertiti Papirüs';

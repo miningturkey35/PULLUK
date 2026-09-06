@@ -14,6 +14,7 @@ const CONFIG = {
     'plak': '13FPeN7gTD3SjbUB6ENIfaJ4OVa6rYqd0', // Plak Arşivi (Klasör ID'si eklenecek)
     'banknot': '1ffJ9xKTsrKpaM3OcJ0fRU4ggcRRmKBdL', // Banknot Koleksiyonu
     'allother': '1mmPvVEreFr0cbXjX3Ds21FOsZI9cRaH0', // Daha Ne Varsa (ALLOTHER)
+    'legoverse': '1cJpRJ_B7wbHOJ69oYzI6JYWQdbabkLx4', // LEGO Koleksiyonu
     'preview': '1cyZ7qFqvoTA39E0jWSK2LuueK7l0Da-W' // Önizleme görselleri
   },
 
@@ -1298,6 +1299,89 @@ function extractPlakInfoFromHtml(html) {
 
   return { title, subtitle, image, code, artist, album, plakSirketi, katalogNo, year, format, country, genre, pressing, matrixNo, condition };
 }
+
+function extractLegoverseInfoFromHtml(html) {
+  const EMPTY = { title: '', subtitle: '', image: '', code: '', setNo: '', setName: '', theme: '', subTheme: '', pieceCount: '', minifigCount: '', year: '', rarity: '', condition: '', rrp: '', estValue: '' };
+  if (!html) return EMPTY;
+
+  const cleanHtml = html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '');
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(cleanHtml, 'text/html');
+
+  let title = '', subtitle = '', image = '', code = '';
+  let setNo = '', setName = '', theme = '', subTheme = '', pieceCount = '', minifigCount = '';
+  let year = '', rarity = '', condition = '', rrp = '', estValue = '';
+
+  const h1El = doc.querySelector('h1');
+  if (h1El) title = h1El.textContent.trim();
+
+  const imgEl = doc.querySelector('.main-photos img, .gallery img, img');
+  if (imgEl) image = imgEl.getAttribute('src') || '';
+
+  const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
+  const tableData = {};
+  if (rows) {
+    for (const row of rows) {
+      const thMatches = row.match(/<th[^>]*>([\s\S]*?)<\/th>/gi);
+      const tdMatches = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
+      let key = '', val = '';
+      if (thMatches && tdMatches && tdMatches.length >= 1) {
+        key = thMatches[0].replace(/<[^>]+>/g, '').trim();
+        val = tdMatches[0].replace(/<[^>]+>/g, '').trim();
+      } else if (tdMatches && tdMatches.length >= 2) {
+        key = tdMatches[0].replace(/<[^>]+>/g, '').trim();
+        val = tdMatches[1].replace(/<[^>]+>/g, '').trim();
+      }
+      if (key && val) tableData[key.toLowerCase().trim()] = val;
+    }
+  }
+
+  const cells = doc.querySelectorAll('td, th');
+  for (let i = 0; i < cells.length; i++) {
+    const t = cells[i].textContent.trim();
+    const nextTd = cells[i].nextElementSibling;
+    if (nextTd && t.length < 50) {
+      tableData[t.toLowerCase().trim()] = nextTd.textContent.trim();
+    }
+  }
+
+  const findKey = (...keys) => {
+    for (const k of keys) {
+      const low = k.toLowerCase();
+      for (const tk of Object.keys(tableData)) {
+        if (tk.includes(low) || low.includes(tk)) return tableData[tk];
+      }
+    }
+    return '';
+  };
+
+  setNo = findKey('lego set no', 'set no', 'set numarası', 'set number');
+  setName = findKey('set adı', 'set name', 'set adi');
+  theme = findKey('tema / theme', 'tema', 'theme');
+  subTheme = findKey('alt tema / subtheme', 'alt tema', 'subtheme');
+  pieceCount = findKey('parça sayısı', 'parça', 'pieces', 'piece count');
+  minifigCount = findKey('minifigür sayısı', 'minifigür', 'minifigure', 'minifigures');
+  year = findKey('çıkış yılı', 'yıl', 'year', 'tarih', 'release year');
+  rarity = findKey('nadirlik derecesi', 'nadirlik', 'rarity');
+  condition = findKey('set durumu', 'tamlık oranı', 'durum', 'condition');
+  rrp = findKey('rrp', 'orijinal fiyat', 'msrp');
+  estValue = findKey('tahmini değer', 'güncel tahmini değer', 'değer');
+
+  if (!year) {
+    const yearMatch = (cleanHtml.replace(/<[^>]+>/g, ' ')).match(/\b((?:19|20)\d{2})\b/);
+    if (yearMatch) year = yearMatch[1];
+  }
+
+  if (!setName && title) setName = title;
+
+  code = setNo;
+
+  return { title, subtitle, image, code, setNo, setName, theme, subTheme, pieceCount, minifigCount, year, rarity, condition, rrp, estValue };
+}
+
 const DB_NAME = 'PullukDB';
 const DB_VERSION = 10; // v10: clear stale cache, fix country labels & mobile scroll
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -1640,6 +1724,22 @@ async function processPreviewQueue() {
           if (diecastData.model) file._title = diecastData.model;
         }
 
+        // Legoverse-specific extraction
+        if (gallery && gallery.id === 'legoverse') {
+          const legoData = extractLegoverseInfoFromHtml(html);
+          file._setNo = legoData.setNo;
+          file._setName = legoData.setName;
+          file._theme = legoData.theme;
+          file._subTheme = legoData.subTheme;
+          file._pieceCount = legoData.pieceCount;
+          file._minifigCount = legoData.minifigCount;
+          file._rarity = legoData.rarity;
+          file._rrp = legoData.rrp;
+          file._estValue = legoData.estValue;
+          if (legoData.setName) file._title = legoData.setName;
+          if (legoData.theme) file._subtitle = legoData.subTheme ? `${legoData.theme} — ${legoData.subTheme}` : legoData.theme;
+        }
+
         saveFileToCache(file);
         updateCardUI(item);
         if (gallery) gallery.checkAndExtractCategory(file, card);
@@ -1845,7 +1945,7 @@ class GalleryManager {
     this.allFiles = [];
     this.filteredFiles = [];
     this.currentPage = 1;
-    const pageSizes = { galeri: 6, diecast: 3, plak: 3, banknot: 6, allother: 6 };
+    const pageSizes = { galeri: 6, diecast: 3, plak: 3, banknot: 6, legoverse: 6, allother: 6 };
     this.pageSize = pageSizes[this.id] || CONFIG.PAGE_SIZE;
     this.currentFilter = 'all';
     this.searchQuery = '';
@@ -2406,6 +2506,122 @@ class GalleryManager {
     return card;
   }
 
+  createLegoverseCard(file, index) {
+    const bgClass = BG_CLASSES[index % BG_CLASSES.length];
+    const viewUrl = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
+    const { icon } = getFileType(file.mimeType, file.name);
+
+    let legoData = {};
+    if (!file.isMock && file._htmlContent) {
+      legoData = extractLegoverseInfoFromHtml(file._htmlContent);
+    }
+
+    const setNo = file._setNo || legoData.setNo || '';
+    const setName = file._setName || legoData.setName || file._title || '';
+    const theme = file._theme || legoData.theme || '';
+    const subTheme = file._subTheme || legoData.subTheme || '';
+    const pieceCount = file._pieceCount || legoData.pieceCount || '';
+    const minifigCount = file._minifigCount || legoData.minifigCount || '';
+    const year = file._year || legoData.year || '';
+    const rarity = file._rarity || legoData.rarity || '';
+    const condition = file._condition || legoData.condition || '';
+    const rrp = file._rrp || legoData.rrp || '';
+    const estValue = file._estValue || legoData.estValue || '';
+
+    const initialTitle = setName || setNo || file.name.replace(/\.(html|htm|pdf)$/i, '');
+    const hasImage = Boolean(file._image || legoData.image);
+    const imageSrc = hasImage ? (file._image || legoData.image) : '';
+    const fileNameNoExt = file.name.replace(/\.(html|htm|pdf)$/i, '');
+
+    const card = document.createElement('div');
+    card.className = 'pdf-card legoverse-card reveal';
+    card.style.cursor = 'pointer';
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', `${initialTitle} — görüntüle`);
+    card.dataset.name = initialTitle.toLowerCase();
+    card.dataset.category = (theme || file.category || '').toLowerCase();
+    card.dataset.fileId = file.id || '';
+    card.dataset.viewUrl = viewUrl;
+    card.dataset.mimeType = file.mimeType || '';
+    if (file.isMock) card.dataset.mock = '1';
+
+    card.innerHTML = `
+      <div class="pdf-card-thumb">
+        <div class="pdf-icon-frame lego-icon-frame ${bgClass}">
+          <img class="pdf-icon-img card-img-el" src="${imageSrc}" alt="${initialTitle}" ${imageSrc ? '' : 'style="display:none;"'} />
+          <span class="pdf-icon-fallback card-fallback-el" ${imageSrc ? 'style="display:none;"' : ''} aria-hidden="true">${icon}</span>
+        </div>
+      </div>
+      <div class="pdf-card-main">
+        <div class="pdf-card-info lego-card-info">
+          <div class="pdf-card-field lego-field-title">
+            <span class="pdf-card-field__label">Set Adı</span>
+            <span class="pdf-card-field__value pdf-card-title-value">${initialTitle || '—'}</span>
+          </div>
+          <div class="pdf-card-field lego-field-setno">
+            <span class="pdf-card-field__label">LEGO Set No</span>
+            <span class="pdf-card-field__value">${setNo || '—'}</span>
+          </div>
+          <div class="pdf-card-field lego-field-theme">
+            <span class="pdf-card-field__label">Tema</span>
+            <span class="pdf-card-field__value">${theme || '—'}${subTheme ? ' — ' + subTheme : ''}</span>
+          </div>
+          <div class="pdf-card-field lego-field-year">
+            <span class="pdf-card-field__label">Yıl</span>
+            <span class="pdf-card-field__value">${year || '—'}</span>
+          </div>
+          <div class="pdf-card-field lego-field-pieces">
+            <span class="pdf-card-field__label">Parça</span>
+            <span class="pdf-card-field__value">${pieceCount || '—'}</span>
+          </div>
+          <div class="pdf-card-field lego-field-minifig">
+            <span class="pdf-card-field__label">Minifigür</span>
+            <span class="pdf-card-field__value">${minifigCount || '—'}</span>
+          </div>
+          <div class="pdf-card-field lego-field-collection">
+            <span class="pdf-card-field__label">Koleksiyon No</span>
+            <span class="pdf-card-field__value">${fileNameNoExt || '—'}</span>
+          </div>
+          <div class="pdf-card-field lego-field-rarity">
+            <span class="pdf-card-field__label">Nadirlik</span>
+            <span class="pdf-card-field__value">${rarity || '—'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="pdf-card-action">
+        <span class="pdf-open-btn" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </span>
+      </div>
+    `;
+
+    const imgEl = card.querySelector('.card-img-el');
+    const fallbackEl = card.querySelector('.card-fallback-el');
+    const titleEl = card.querySelector('.lego-field-title .pdf-card-title-value');
+
+    if (!file.isMock && (!file._image || !file._setName) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
+      if (CONFIG.GOOGLE_API_KEY.trim()) {
+        previewQueue.push({ file, titleEl, subEl: null, imgEl, fallbackEl, codeEl: null, card, gallery: this, koleksiyonEl: null, ulkeEl: null, yilEl: null, nominalEl: null, tipiEl: null, galleryId: 'legoverse' });
+        processPreviewQueue();
+      }
+    }
+
+    const openCard = () => {
+      if (file.isMock) {
+        window.open(viewUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        openViewer(file._title || initialTitle || 'Detay', file.id, viewUrl, file.mimeType, this);
+      }
+    };
+    card.addEventListener('click', openCard);
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCard(); }
+    });
+
+    return card;
+  }
+
   createDiecastCard(file, index) {
     const viewUrl = file.webViewLink || `https://drive.google.com/file/d/${file.id}/view`;
     const initialTitle = file._title || (file.isMock ? file.name.replace(/\.(pdf|html|htm|jpg|jpeg|png|webp)$/i, '') : file.name.replace(/\.(html|htm|pdf)$/i, ''));
@@ -2524,7 +2740,8 @@ class GalleryManager {
     }
     const isDiecast = this.id === 'diecast';
     const isPlak = this.id === 'plak';
-    const cardSelector = isDiecast ? '.diecast-card' : '.pdf-card';
+    const isLegoverse = this.id === 'legoverse';
+    const cardSelector = isDiecast ? '.diecast-card' : isLegoverse ? '.legoverse-card' : '.pdf-card';
     Array.from(this.els.grid.querySelectorAll(cardSelector)).forEach(c => c.remove());
     if (this.els.empty) this.els.empty.classList.remove('is-visible');
 
@@ -2549,7 +2766,9 @@ class GalleryManager {
         ? this.createDiecastCard(file, startIndex + i)
         : isPlak
           ? this.createPlakCard(file, startIndex + i)
-          : this.createPdfCard(file, startIndex + i, this.id);
+          : isLegoverse
+            ? this.createLegoverseCard(file, startIndex + i)
+            : this.createPdfCard(file, startIndex + i, this.id);
       this.els.grid.appendChild(card);
     });
 
@@ -3058,6 +3277,7 @@ async function init() {
     new GalleryManager('diecast', CONFIG.FOLDERS['diecast']),
     new GalleryManager('plak', CONFIG.FOLDERS['plak']),
     new GalleryManager('banknot', CONFIG.FOLDERS['banknot']),
+    new GalleryManager('legoverse', CONFIG.FOLDERS['legoverse']),
     new GalleryManager('allother', CONFIG.FOLDERS['allother'])
   ];
 

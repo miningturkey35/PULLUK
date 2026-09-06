@@ -72,6 +72,7 @@
         <a href="#diecast">GARAJ 1:X</a>
         <a href="#plak">VINYL ODYSSEY</a>
         <a href="#banknot">CÜZDAN-I KADİM</a>
+        <a href="#legoverse">LEGOVERSE</a>
         <a href="#allother">DAHA NE VARSA</a>
         <a href="#koleksiyoncu">Hakkında</a>
       </nav>
@@ -253,6 +254,23 @@
           <div class="card-count">
             <span class="count-num banknot-count-num">—</span>
             <span class="count-label">Parça</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEGO Koleksiyonu -->
+      <div class="collection-card reveal reveal-delay-4"
+           role="button" tabindex="0"
+           data-scroll-to="legoverse"
+           aria-label="LEGO Koleksiyonunu görüntüle"
+           style="cursor:pointer;">
+        <div class="card-stripe stripe-red"></div>
+        <div class="card-body">
+          <h3>LEGO Koleksiyonu</h3>
+          <p>LEGO setlerinden oluşan özel koleksiyon. Star Wars, Creator, Architecture ve daha fazlası.</p>
+          <div class="card-count">
+            <span class="count-num legoverse-count-num">—</span>
+            <span class="count-label">Set</span>
           </div>
         </div>
       </div>
@@ -544,6 +562,71 @@
 
     <!-- Pagination -->
     <div class="pagination-container" id="paginationContainer_banknot"></div>
+
+  </div>
+</section>
+
+<section class="section gallery-section" id="legoverse" aria-labelledby="legoverse-heading">
+  <div class="wrap">
+
+    <div class="section-head reveal">
+      <span class="eyebrow">LEGO Koleksiyonu</span>
+      <h2 id="legoverse-heading">LEGOVERSE</h2>
+      <p>LEGO setlerinden oluşan özel koleksiyon. Star Wars, Creator, Architecture ve daha fazlası. Her set dijital ortamda özenle belgelenmiştir.</p>
+    </div>
+
+    <!-- API Notice Banner -->
+    <div class="api-notice" id="apiNotice_legoverse" role="alert">
+      <span class="api-notice-icon" aria-hidden="true">💡</span>
+      <div class="api-notice-text">
+        <b>Demo Modu</b>
+        Şu an örnek veriler gösteriliyor. Gerçek Drive dosyalarını görmek için <code>app.js</code> dosyasındaki
+        <code>GOOGLE_API_KEY</code> alanına Google Cloud API Key'inizi ekleyin.
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="gallery-controls reveal">
+      <div class="search-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input
+          type="search"
+          class="search-box"
+          id="searchBox_legoverse"
+          placeholder="LEGO set ara… (set no, tema, ad)"
+          aria-label="LEGO koleksiyonunda ara"
+          autocomplete="off"
+        >
+      </div>
+      <div class="filter-row" id="filterRow_legoverse" role="group" aria-label="Kategoriye göre filtrele">
+        <button class="filter-btn is-active" data-filter="all">Tümü</button>
+      </div>
+    </div>
+
+    <!-- Gallery meta -->
+    <div class="gallery-meta reveal" id="galleryMeta_legoverse" aria-live="polite" aria-atomic="true">
+      Yükleniyor…
+    </div>
+
+    <!-- Grid -->
+    <div class="pdf-grid" id="pdfGrid_legoverse" aria-label="LEGO koleksiyonu">
+
+      <!-- Loading state -->
+      <div class="gallery-loading" id="galleryLoading_legoverse" aria-label="Yükleniyor" role="status">
+        <div class="spinner" aria-hidden="true"></div>
+        <span class="loading-text">Koleksiyon yükleniyor…</span>
+      </div>
+
+      <!-- Empty state -->
+      <div class="gallery-empty" id="galleryEmpty_legoverse" aria-label="Sonuç bulunamadı">
+        <div class="empty-icon" aria-hidden="true">🔍</div>
+        <div class="empty-text">Aramanızla eşleşen LEGO seti bulunamadı</div>
+      </div>
+
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-container" id="paginationContainer_legoverse"></div>
 
   </div>
 </section>
