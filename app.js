@@ -2045,14 +2045,17 @@ class GalleryManager {
         counterEl.textContent = this.allFiles.length + '+';
       }
       if (this.els.loading) this.els.loading.style.display = 'none';
+      if (this.els.notice) this.els.notice.classList.add('is-hidden');
     }
 
     const hideTimeout = setTimeout(() => {
       if (this.els.loading) this.els.loading.style.display = 'none';
     }, 8000);
 
+    const hasPrecompiled = Boolean(window.PULLUK_COLLECTION_DATA && window.PULLUK_COLLECTION_DATA[this.id]);
+
     try {
-      const driveFiles = await fetchDriveFiles(this.folderId, this.els.notice, this.id);
+      const driveFiles = await fetchDriveFiles(this.folderId, hasPrecompiled ? null : this.els.notice, this.id);
       if (driveFiles && driveFiles.length > 0) {
         console.log(`[PULLUK] load() fetched ${driveFiles.length} files from Drive for ${this.id}`);
         const fileMap = new Map();
