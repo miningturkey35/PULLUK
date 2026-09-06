@@ -75,7 +75,7 @@ function extractAllInfo(fileId, fileName, galleryType, html) {
   // Code extraction
   const codeMatch = html.match(/class=["'](?:coll-num|kod|collection-number|code)[^"']*["'][^>]*>([\s\S]*?)<\//i) ||
                     html.match(/<title[^>]*>\s*([A-Z0-9]+)/i);
-  if (codeMatch) data._code = codeMatch[1].replace(/<[^>]+>/g, '').trim();
+  if (codeMatch) data._code = codeMatch[1].replace(/<[^>]+>/g, '').replace(/^(koleksiyon|katalog)\s*(numaras[ıi]|no)\s*[:\-]\s*/i, '').trim();
   if (!data._code) {
     const fnm = fileName.match(/^([A-Z0-9]+)/i);
     if (fnm) data._code = fnm[1].toUpperCase();
@@ -130,10 +130,11 @@ function extractAllInfo(fileId, fileName, galleryType, html) {
     return '';
   };
 
+  const textLow = html.toLowerCase();
+
   // Country
   data._country = find('ülke', 'ulke', 'menşei', 'country') || '';
   if (!data._country) {
-    const textLow = html.toLowerCase();
     // Check more specific terms first to avoid false matches
     // e.g. 'Osmanlıca' (Ottoman Turkish language) should not match 'Osmanlı'
     if (textLow.includes('türkiye cumhuriyeti') || textLow.includes('t.c.')) data._country = 'Türkiye Cumhuriyeti';
@@ -250,10 +251,23 @@ function extractAllInfo(fileId, fileName, galleryType, html) {
     data._title = data._album;
     data._subtitle = data._artist;
   } else if (galleryType === 'banknot') {
-    data._title = '50.000 Türk Lirası';
-    data._nominalDeger = '50.000 TL';
-    data._pulTipi = find('emisyon / seri', 'emisyon') || 'E7 Emisyon Grubu — I. Seri';
-    data._country = 'Türkiye Cumhuriyeti';
+    if (!data._title) data._title = '50.000 Türk Lirası';
+    // Derive nominal from title if not found in HTML data, fallback to hardcoded
+    let nominalFromTitle = '';
+    const t = data._title.match(/([\d.,]+)\s*(?:T[üu]rk\s+)?[Ll]ir(?:a|as)\w*/i);
+    if (t) nominalFromTitle = t[1] + ' TL';
+    const nominalRaw = find('nominal değer', 'nominal');
+    let nominal = nominalRaw
+      ? nominalRaw.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim()
+      : (nominalFromTitle || (data._nominalDeger || '50.000 TL').replace(/[^\d.,]/g, ''));
+    // Guard: ensure nominal looks like a proper denomination; otherwise use title-derived
+    if (!/[\d]/.test(nominal) || /kaybı|çekilme/i.test(nominal)) nominal = nominalFromTitle || '50.000 TL';
+    data._nominalDeger = nominal;
+    data._pulTipi = find('emisyon / seri', 'emisyon grubu', 'emisyon') || data._pulTipi || 'E7 Emisyon Grubu — I. Seri';
+    data._country = 'T.C.';
+    const banknoteYearVal = find('basım / dolaşım yılı', 'tedavüle çıkış', 'dolaşıma çıkış');
+    const banknoteYearMatch = banknoteYearVal.match(/\b((?:18|19|20)\d{2})\b/);
+    if (banknoteYearMatch) data._year = banknoteYearMatch[1];
     data._year = data._year || '1989';
   } else if (galleryType === 'allother') {
     if (fileName.includes('MGD001')) {
@@ -312,4 +326,8 @@ async function run() {
   console.log('Saved data/collection_data.json');
 }
 
-run().catch(console.error);
+if (require.main === module) {
+  run().catch(console.error);
+}
+
+module.exports = { extractAllInfo, normalizeCountry, FOLDERS, API_KEY, ROOT, DATA_DIR };
