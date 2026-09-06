@@ -121,6 +121,16 @@ function extractAllInfo(fileId, fileName, galleryType, html) {
     }
   }
 
+  // 3. Field divs (used in LEGO etc.: <div class="field"><label>...</label><div class="val">...</div></div>)
+  const fieldDivs = html.match(/<div[^>]*class=["'][^"']*field[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi) || [];
+  for (const item of fieldDivs) {
+    const lbl = (item.match(/<label[^>]*>([\s\S]*?)<\/label>/i) || [])[1];
+    const val = (item.match(/class=["']val["'][^>]*>([\s\S]*?)<\/div>/i) || [])[1];
+    if (lbl && val) {
+      kv[lbl.replace(/<[^>]+>/g, '').trim().toLowerCase()] = val.replace(/<[^>]+>/g, ' ').trim();
+    }
+  }
+
   const find = (...keys) => {
     for (const k of keys) {
       const lk = k.toLowerCase();
@@ -278,10 +288,13 @@ function extractAllInfo(fileId, fileName, galleryType, html) {
     data._pieceCount = find('parça sayısı', 'parça') || '';
     data._minifigCount = find('minifigür sayısı', 'minifigür') || '';
     data._rarity = find('nadirlik derecesi', 'nadirlik') || '';
-    data._setStatus = find('ürün durumu', 'set durumu') || '';
+    data._setStatus = find('ürün durumu', 'üretim durumu', 'set durumu') || '';
     data._condition = find('tamlık oranı', 'durum', 'condition') || '';
-    data._rrp = find('rrp', 'orijinal fiyat') || '';
-    data._estValue = find('tahmini değer', 'güncel tahmini değer') || '';
+    data._rrp = find('rrp', 'orijinal fiyat', 'rrp (orijinal)') || '';
+    data._estValue = find('tahmini değer', 'güncel tahmini değer', 'güncel tahmini değer (yeni/kapalı)') || '';
+    data._rareMinifigs = find('özel / nadir minifigürler', 'özel minifigürler', 'nadir minifigürler') || '';
+    data._rarePieces = find('özel / nadir parçalar', 'özel parçalar', 'nadir parçalar') || '';
+    data._year = data._year || '';
     data._title = data._setName || data._setNo || fileName.replace(/\.html$/i, '');
     data._subtitle = data._theme ? (data._subTheme ? `${data._theme} — ${data._subTheme}` : data._theme) : '';
   } else if (galleryType === 'allother') {

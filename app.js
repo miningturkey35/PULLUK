@@ -1301,7 +1301,7 @@ function extractPlakInfoFromHtml(html) {
 }
 
 function extractLegoverseInfoFromHtml(html) {
-  const EMPTY = { title: '', subtitle: '', image: '', code: '', setNo: '', setName: '', theme: '', subTheme: '', pieceCount: '', minifigCount: '', year: '', rarity: '', condition: '', rrp: '', estValue: '' };
+  const EMPTY = { title: '', subtitle: '', image: '', code: '', setNo: '', setName: '', theme: '', subTheme: '', pieceCount: '', minifigCount: '', year: '', rarity: '', condition: '', setStatus: '', rrp: '', estValue: '', rareMinifigs: '', rarePieces: '' };
   if (!html) return EMPTY;
 
   const cleanHtml = html
@@ -1313,7 +1313,8 @@ function extractLegoverseInfoFromHtml(html) {
 
   let title = '', subtitle = '', image = '', code = '';
   let setNo = '', setName = '', theme = '', subTheme = '', pieceCount = '', minifigCount = '';
-  let year = '', rarity = '', condition = '', rrp = '', estValue = '';
+  let year = '', rarity = '', condition = '', setStatus = '', rrp = '', estValue = '';
+  let rareMinifigs = '', rarePieces = '';
 
   const h1El = doc.querySelector('h1');
   if (h1El) title = h1El.textContent.trim();
@@ -1348,6 +1349,34 @@ function extractLegoverseInfoFromHtml(html) {
     }
   }
 
+  // Extract from <div class="field"><label>...</label><div class="val">...</div></div>
+  const fieldDivs = doc.querySelectorAll('.field');
+  for (const field of fieldDivs) {
+    const lbl = field.querySelector('label');
+    const val = field.querySelector('.val');
+    if (lbl && val) {
+      const key = lbl.textContent.trim().toLowerCase();
+      const value = val.textContent.trim();
+      if (key && value) tableData[key] = value;
+    }
+  }
+
+  // Also extract from header: .set-no, .rarity
+  const setNoEl = doc.querySelector('.set-no');
+  if (setNoEl) {
+    const snText = setNoEl.textContent.trim();
+    const snMatch = snText.match(/(\d{4,6})/);
+    if (snMatch) tableData['lego set no'] = snMatch[1];
+    if (!tableData['tema / theme']) {
+      const themeMatch = snText.match(/LEGO®?\s*(.+?)(?:\s*\d{4,6})?$/);
+      if (themeMatch) tableData['tema / theme'] = themeMatch[1].trim();
+    }
+  }
+  const rarityEl = doc.querySelector('.rarity');
+  if (rarityEl && !tableData['nadirlik derecesi']) {
+    tableData['nadirlik derecesi'] = rarityEl.textContent.trim();
+  }
+
   const findKey = (...keys) => {
     for (const k of keys) {
       const low = k.toLowerCase();
@@ -1367,8 +1396,11 @@ function extractLegoverseInfoFromHtml(html) {
   year = findKey('çıkış yılı', 'yıl', 'year', 'tarih', 'release year');
   rarity = findKey('nadirlik derecesi', 'nadirlik', 'rarity');
   condition = findKey('set durumu', 'tamlık oranı', 'durum', 'condition');
-  rrp = findKey('rrp', 'orijinal fiyat', 'msrp');
-  estValue = findKey('tahmini değer', 'güncel tahmini değer', 'değer');
+  setStatus = findKey('ürün durumu', 'üretim durumu', 'set durumu');
+  rrp = findKey('rrp', 'orijinal fiyat', 'rrp (orijinal)');
+  estValue = findKey('tahmini değer', 'güncel tahmini değer', 'güncel tahmini değer (yeni/kapalı)');
+  rareMinifigs = findKey('özel / nadir minifigürler', 'özel minifigürler', 'nadir minifigürler');
+  rarePieces = findKey('özel / nadir parçalar', 'özel parçalar', 'nadir parçalar');
 
   if (!year) {
     const yearMatch = (cleanHtml.replace(/<[^>]+>/g, ' ')).match(/\b((?:19|20)\d{2})\b/);
@@ -1379,7 +1411,7 @@ function extractLegoverseInfoFromHtml(html) {
 
   code = setNo;
 
-  return { title, subtitle, image, code, setNo, setName, theme, subTheme, pieceCount, minifigCount, year, rarity, condition, rrp, estValue };
+  return { title, subtitle, image, code, setNo, setName, theme, subTheme, pieceCount, minifigCount, year, rarity, condition, setStatus, rrp, estValue, rareMinifigs, rarePieces };
 }
 
 const DB_NAME = 'PullukDB';
@@ -1734,8 +1766,11 @@ async function processPreviewQueue() {
           file._pieceCount = legoData.pieceCount;
           file._minifigCount = legoData.minifigCount;
           file._rarity = legoData.rarity;
+          file._setStatus = legoData.setStatus;
           file._rrp = legoData.rrp;
           file._estValue = legoData.estValue;
+          file._rareMinifigs = legoData.rareMinifigs;
+          file._rarePieces = legoData.rarePieces;
           if (legoData.setName) file._title = legoData.setName;
           if (legoData.theme) file._subtitle = legoData.subTheme ? `${legoData.theme} — ${legoData.subTheme}` : legoData.theme;
         }
@@ -2525,8 +2560,11 @@ class GalleryManager {
     const year = file._year || legoData.year || '';
     const rarity = file._rarity || legoData.rarity || '';
     const condition = file._condition || legoData.condition || '';
+    const setStatus = file._setStatus || legoData.setStatus || '';
     const rrp = file._rrp || legoData.rrp || '';
     const estValue = file._estValue || legoData.estValue || '';
+    const rareMinifigs = file._rareMinifigs || legoData.rareMinifigs || '';
+    const rarePieces = file._rarePieces || legoData.rarePieces || '';
 
     const initialTitle = setName || setNo || file.name.replace(/\.(html|htm|pdf)$/i, '');
     const hasImage = Boolean(file._image || legoData.image);
@@ -2587,6 +2625,14 @@ class GalleryManager {
             <span class="pdf-card-field__label">Nadirlik</span>
             <span class="pdf-card-field__value">${rarity || '—'}</span>
           </div>
+          ${setStatus ? `<div class="pdf-card-field lego-field-status">
+            <span class="pdf-card-field__label">Üretim Durumu</span>
+            <span class="pdf-card-field__value">${setStatus}</span>
+          </div>` : ''}
+          ${estValue ? `<div class="pdf-card-field lego-field-value">
+            <span class="pdf-card-field__label">Tahmini Değer</span>
+            <span class="pdf-card-field__value">${estValue}</span>
+          </div>` : ''}
         </div>
       </div>
       <div class="pdf-card-action">
