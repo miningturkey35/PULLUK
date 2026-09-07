@@ -22,9 +22,9 @@ function normalizeCountry(name) {
   const n = name.trim();
   const map = {
     'Osmanlı İmparatorluğu': 'Osmanlı İmp.',
-    'Türkiye Cumhuriyeti': 'T.C.',
-    'Türkiye (Cumhuriyet)': 'T.C.',
-    'Türkiye · Türkiye Kızılay Gençliği': 'T.C.',
+    'Türkiye Cumhuriyeti': 'Türkiye Cumhuriyeti',
+    'Türkiye (Cumhuriyet)': 'Türkiye Cumhuriyeti',
+    'Türkiye · Türkiye Kızılay Gençliği': 'Türkiye Cumhuriyeti',
     'Birleşik Krallık': 'UK',
     'Birleşik Krallık (UK)': 'UK',
     'Almanya': 'Almanya',
@@ -34,13 +34,13 @@ function normalizeCountry(name) {
     'Rusya': 'Rusya',
     'Japonya': 'Japonya',
     'Çin': 'Çin',
-    'Türkiye': 'T.C.',
+    'Türkiye': 'Türkiye Cumhuriyeti',
   };
   if (map[n]) return map[n];
   // Fuzzy match
   const low = n.toLowerCase();
   if (low.includes('osmanlı') || low.includes('ottoman')) return 'Osmanlı İmp.';
-  if (low.includes('türkiye') || low.includes('turkiye') || low.includes('t.c.')) return 'T.C.';
+  if (low.includes('türkiye') || low.includes('turkiye') || low.includes('t.c.')) return 'Türkiye Cumhuriyeti';
   if (low.includes('birleşik krallık') || low.includes('united kingdom') || low.includes('ingiltere') || low.includes('england') || low.includes('gt. britain')) return 'UK';
   if (low.includes('almanya') || low.includes('germany')) return 'Almanya';
   if (low.includes('abd') || low.includes('usa') || low.includes('united states')) return 'ABD';
@@ -275,7 +275,7 @@ function extractAllInfo(fileId, fileName, galleryType, html) {
     if (!/[\d]/.test(nominal) || /kaybı|çekilme/i.test(nominal)) nominal = nominalFromTitle || '50.000 TL';
     data._nominalDeger = nominal;
     data._pulTipi = find('emisyon / seri', 'emisyon grubu', 'emisyon') || data._pulTipi || 'E7 Emisyon Grubu — I. Seri';
-    data._country = 'T.C.';
+    data._country = 'Türkiye Cumhuriyeti';
     const banknoteYearVal = find('basım / dolaşım yılı', 'tedavüle çıkış', 'dolaşıma çıkış');
     const banknoteYearMatch = banknoteYearVal.match(/\b((?:18|19|20)\d{2})\b/);
     if (banknoteYearMatch) data._year = banknoteYearMatch[1];
@@ -308,7 +308,7 @@ function extractAllInfo(fileId, fileName, galleryType, html) {
     } else if (fileName.includes('MGD002')) {
       data._title = 'U2 360° Tour İstanbul Bileti';
       data._subtitle = 'Konser Bileti · Atatürk Olimpiyat Stadyumu';
-      data._country = 'Türkiye';
+      data._country = 'Türkiye Cumhuriyeti';
       data._year = '2010';
       data._nominalDeger = 'Konser Bileti';
       data._pulTipi = 'Hatıra Bileti';

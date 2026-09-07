@@ -161,6 +161,9 @@ function normalizeCountryName(name) {
     'Osmanlı İmparatorluğu': 'Osmanlı İmp.',
     'Osmanlı İmp.': 'Osmanlı İmp.',
     'Türkiye Cumhuriyeti': 'Türkiye Cumhuriyeti',
+    'Türkiye': 'Türkiye Cumhuriyeti',
+    'T.C.': 'Türkiye Cumhuriyeti',
+    'TC': 'Türkiye Cumhuriyeti',
     'Birleşik Krallık': 'UK',
     'Almanya': 'Almanya',
     'ABD': 'ABD',
@@ -1415,7 +1418,7 @@ function extractLegoverseInfoFromHtml(html) {
 }
 
 const DB_NAME = 'PullukDB';
-const DB_VERSION = 10; // v10: clear stale cache, fix country labels & mobile scroll
+const DB_VERSION = 11; // v11: clear stale cache after country normalization fix
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const STORE_NAME = 'fileCache';
 
