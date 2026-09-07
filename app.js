@@ -27,7 +27,7 @@ const CONFIG = {
 // ─── STAMP COUNTRIES ────────────────────────────────────────────────────────
 const STAMP_COUNTRIES = [
   { name: 'Osmanlı İmp.', keywords: ['osmanlı', 'ottoman', 'imp.', 'imparatorlugu', 'imparatorluğu'] },
-  { name: 'Türkiye Cumhuriyeti', keywords: ['türkiye cumhuriyeti', 'turkiye cumhuriyeti', 'tc ', 't.c.', 'cumhuriyet'] },
+  { name: 'Türkiye Cumhuriyeti', keywords: ['türkiye cumhuriyeti', 'turkiye cumhuriyeti', 'tc ', 't.c.', 'cumhuriyet', 'tayyare', 'cemiyeti', 'thk', 'türk hava', 'hava kurumu', 'ptt', 'posta ve telgraf', 'demiryolları', 'tcdd'] },
   { name: 'Birleşik Krallık', keywords: ['birleşik krallık', 'birlesik krallik', 'united kingdom', 'uk ', 'great britain', 'ingiltere', 'england'] },
   { name: 'Almanya', keywords: ['almanya', 'germany', 'deutschland', 'bundespost', 'ddr'] },
   { name: 'ABD', keywords: ['abd', 'usa', 'united states', 'amerika'] },
@@ -139,7 +139,7 @@ function extractCountryFromText(text) {
     }
   }
   // Additional fallback patterns
-  if (/\bt\.c\.\b|\btürkiye cumhuriyeti\b|\bturkiye cumhuriyeti\b/.test(lower)) return 'Türkiye Cumhuriyeti';
+  if (/\bt\.c\.\b|\btürkiye cumhuriyeti\b|\bturkiye cumhuriyeti\b|\btayyare\b|\bcemiyeti\b|\bthk\b|\btürk hava\b|\bhava kurumu\b|\bptt\b|\bposta ve telgraf\b|\bdemiryolları\b|\btcdd\b/.test(lower)) return 'Türkiye Cumhuriyeti';
   if (/\bosmanlı\b|\bottoman\b/.test(lower)) return 'Osmanlı İmp.';
   if (/\bingiltere\b|\bengland\b|\bgreat britain\b|\bunited kingdom\b|\buk\b/.test(lower)) return 'Birleşik Krallık';
   if (/\balmanya\b|\bgermany\b|\bdeutschland\b/.test(lower)) return 'Almanya';
@@ -160,7 +160,7 @@ function normalizeCountryName(name) {
   const map = {
     'Osmanlı İmparatorluğu': 'Osmanlı İmp.',
     'Osmanlı İmp.': 'Osmanlı İmp.',
-    'Türkiye Cumhuriyeti': 'T.C.',
+    'Türkiye Cumhuriyeti': 'Türkiye Cumhuriyeti',
     'Birleşik Krallık': 'UK',
     'Almanya': 'Almanya',
     'ABD': 'ABD',
@@ -1617,6 +1617,25 @@ async function processPreviewQueue() {
           if (diecastData.model) file._title = diecastData.model;
           saveFileToCache(file);
         }
+        // Legoverse-specific: extract from html if not yet done
+        if (gallery && gallery.id === 'legoverse' && !file._setNo && file._htmlContent) {
+          const legoData = extractLegoverseInfoFromHtml(file._htmlContent);
+          file._setNo = legoData.setNo;
+          file._setName = legoData.setName;
+          file._theme = legoData.theme;
+          file._subTheme = legoData.subTheme;
+          file._pieceCount = legoData.pieceCount;
+          file._minifigCount = legoData.minifigCount;
+          file._rarity = legoData.rarity;
+          file._setStatus = legoData.setStatus;
+          file._rrp = legoData.rrp;
+          file._estValue = legoData.estValue;
+          file._rareMinifigs = legoData.rareMinifigs;
+          file._rarePieces = legoData.rarePieces;
+          if (legoData.setName) file._title = legoData.setName;
+          if (legoData.theme) file._subtitle = legoData.subTheme ? `${legoData.theme} — ${legoData.subTheme}` : legoData.theme;
+          saveFileToCache(file);
+        }
         updateCardUI(item);
         return;
       }
@@ -1674,6 +1693,25 @@ async function processPreviewQueue() {
           file._productionYear = diecastData.productionYear;
           if (diecastData.code) file._code = diecastData.code;
           if (diecastData.model) file._title = diecastData.model;
+          saveFileToCache(file);
+        }
+        // Legoverse-specific: extract from cached html if not yet done
+        if (gallery && gallery.id === 'legoverse' && !file._setNo && file._htmlContent) {
+          const legoData = extractLegoverseInfoFromHtml(file._htmlContent);
+          file._setNo = legoData.setNo;
+          file._setName = legoData.setName;
+          file._theme = legoData.theme;
+          file._subTheme = legoData.subTheme;
+          file._pieceCount = legoData.pieceCount;
+          file._minifigCount = legoData.minifigCount;
+          file._rarity = legoData.rarity;
+          file._setStatus = legoData.setStatus;
+          file._rrp = legoData.rrp;
+          file._estValue = legoData.estValue;
+          file._rareMinifigs = legoData.rareMinifigs;
+          file._rarePieces = legoData.rarePieces;
+          if (legoData.setName) file._title = legoData.setName;
+          if (legoData.theme) file._subtitle = legoData.subTheme ? `${legoData.theme} — ${legoData.subTheme}` : legoData.theme;
           saveFileToCache(file);
         }
         updateCardUI(item);
