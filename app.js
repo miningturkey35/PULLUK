@@ -1394,6 +1394,167 @@ function extractBasilsanatInfoFromHtml(html) {
     title, subtitle, image, code, yazar, yayinevi, dil, tur, year, basimYili, basimYeri, durum, ozet
   };
 }
+// ─── İSKAMBIL EXTRACTOR ────────────────────────────────────────────────────
+function extractIskambilInfoFromHtml(html) {
+  const EMPTY = { title: '', subtitle: '', image: '', code: '', marka: '', deste: '', basimYili: '', ulke: '', durum: '', kartSayisi: '', boyut: '', indeks: '', ozet: '' };
+  if (!html) return EMPTY;
+
+  const cleanHtml = html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '');
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(cleanHtml, 'text/html');
+
+  let title = '', subtitle = '', image = '', code = '';
+  let marka = '', deste = '', basimYili = '', ulke = '', durum = '', kartSayisi = '', boyut = '', indeks = '', ozet = '';
+
+  // ── TABLE KEY-VALUE EXTRACTION ──
+  const tableData = {};
+  const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
+  if (rows) {
+    for (const row of rows) {
+      const thMatches = row.match(/<th[^>]*>([\s\S]*?)<\/th>/gi);
+      const tdMatches = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
+      let key = '', val = '';
+      if (thMatches && tdMatches && tdMatches.length >= 1) {
+        key = thMatches[0].replace(/<[^>]+>/g, '').trim();
+        val = tdMatches[0].replace(/<[^>]+>/g, '').trim();
+      } else if (tdMatches && tdMatches.length >= 2) {
+        key = tdMatches[0].replace(/<[^>]+>/g, '').trim();
+        val = tdMatches[1].replace(/<[^>]+>/g, '').trim();
+      }
+      if (key && val) tableData[key.toLowerCase().trim()] = val;
+    }
+  }
+
+  const findTableValue = (...keys) => {
+    for (const k of keys) {
+      const low = k.toLowerCase();
+      for (const tk of Object.keys(tableData)) {
+        if (tk.includes(low) || low.includes(tk)) return tableData[tk];
+      }
+    }
+    return '';
+  };
+
+  // ── CODE (.coll-num) ──
+  const colNumEl = doc.querySelector('.coll-num, .col-num, .kod');
+  if (colNumEl) code = colNumEl.textContent.trim();
+
+  // ── TITLE (<h1>) ──
+  const h1 = doc.querySelector('h1');
+  if (h1) title = h1.textContent.trim();
+  if (!title) {
+    const titleEl = doc.querySelector('title');
+    if (titleEl) title = titleEl.textContent.trim().split('?')[0].replace(/^[^ ]* /, '').trim();
+  }
+
+  // ── SUBTITLE (.subtitle) ──
+  const subEl = doc.querySelector('.subtitle, .sub');
+  if (subEl) subtitle = subEl.textContent.trim();
+
+  // ── IMAGE (.hero img) ──
+  const heroImg = doc.querySelector('.hero img');
+  if (heroImg) image = heroImg.getAttribute('src') || '';
+  if (!image) {
+    const imgEl = doc.querySelector('img');
+    if (imgEl) image = imgEl.getAttribute('src') || '';
+  }
+
+  // ── MARKA (Brand) ──
+  marka = findTableValue('marka', 'marka / üretici', 'manufacturer', 'brand');
+  if (!marka) {
+    // Try subtitle — often "Rider Back — Standard Size — USPCC 2013"
+    if (subtitle) {
+      const parts = subtitle.split(/[—–\-]+/).map(s => s.trim());
+      if (parts.length >= 3) marka = parts[2]; // USPCC 2013
+      else if (parts.length >= 1) marka = parts[parts.length - 1];
+    }
+  }
+  // Strip year from marka if present
+  if (marka) {
+    const yearMatch = marka.match(/\b(\d{4})\b/);
+    if (yearMatch) {
+      if (!basimYili) basimYili = yearMatch[1];
+      marka = marka.replace(/\b\d{4}\b/, '').trim().replace(/\s*[-–—]\s*$/, '').trim();
+    }
+  }
+
+  // ── DESTE (Deck/Pattern) ──
+  deste = findTableValue('deste', 'deste / pattern', 'pattern', 'deck');
+
+  // ── ÜRETİM YILI (Production Year) ──
+  basimYili = findTableValue('üretim yılı', 'uretim yili', 'yıl', 'yil', 'year', 'basım yılı');
+  if (!basimYili) {
+    const yearMatch = (doc.body ? doc.body.textContent : '').match(/\b((?:18|19|20)\d{2})\b/);
+    if (yearMatch) basimYili = yearMatch[1];
+  }
+
+  // ── ÜRETİM YERİ (Country) ──
+  ulke = findTableValue('üretim yeri', 'uretim yeri', 'menşe', 'menße', 'country', 'origin');
+  if (!ulke) {
+    // Extract country keywords
+    const bodyText = (doc.body ? doc.body.textContent : '');
+    if (/ABD|USA|United States/i.test(bodyText)) ulke = 'ABD';
+    else if (/İngiltere|England|UK|Britain/i.test(bodyText)) ulke = 'İngiltere';
+    else if (/Almanya|Germany/i.test(bodyText)) ulke = 'Almanya';
+    else if (/Avusturya|Austria/i.test(bodyText)) ulke = 'Avusturya';
+    else if (/İtalya|Italy/i.test(bodyText)) ulke = 'İtalya';
+    else if (/Fransa|France/i.test(bodyText)) ulke = 'Fransa';
+  }
+
+  // ── DURUM (Condition) ──
+  durum = findTableValue('genel durum', 'durum', 'condition', 'state', 'kondisyon');
+  if (!durum) {
+    const allTh = doc.querySelectorAll('th');
+    for (const th of allTh) {
+      const thText = th.textContent.trim().toLowerCase();
+      if (thText.includes('durum')) {
+        const td = th.nextElementSibling;
+        if (td) { durum = td.textContent.trim(); break; }
+      }
+    }
+  }
+
+  // ── KART SAYISI ──
+  kartSayisi = findTableValue('kart sayısı', 'kart sayisi', 'card count', 'kart adedi');
+
+  // ── BOYUT ──
+  boyut = findTableValue('boyut', 'size', 'ebat');
+
+  // ── İNDEKS ──
+  indeks = findTableValue('indis', 'index', 'indeks');
+
+  // ── ÖZET ──
+  const allH2 = doc.querySelectorAll('h2');
+  for (const h2 of allH2) {
+    const h2Text = h2.textContent.trim().toLowerCase();
+    if (h2Text.includes('tanıt') || h2Text.includes('not') || h2Text.includes('açıklama')) {
+      const section = h2.closest('.section') || h2.parentElement;
+      if (section) {
+        const noteEl = section.querySelector('.note, p, .summary');
+        if (noteEl) ozet = noteEl.textContent.trim();
+      }
+      break;
+    }
+  }
+  if (!ozet) {
+    const summaryEl = doc.querySelector('.note, .summary, .overview');
+    if (summaryEl) ozet = summaryEl.textContent.trim();
+  }
+  if (!ozet) {
+    const firstP = doc.querySelector('p');
+    if (firstP) {
+      const pText = firstP.textContent.trim();
+      if (pText.length > 20) ozet = pText.substring(0, 300);
+    }
+  }
+
+  return {
+    title, subtitle, image, code, marka, deste, basimYili, ulke, durum, kartSayisi, boyut, indeks, ozet
+  };
+}
 // ─── PLAK (VINYL) EXTRACTOR ────────────────────────────────────────────────
 function extractPlakInfoFromHtml(html) {
   const EMPTY = { title: '', subtitle: '', image: '', code: '', artist: '', album: '', plakSirketi: '', katalogNo: '', year: '', format: '', country: '', genre: '', pressing: '', matrixNo: '', condition: '' };
@@ -1796,6 +1957,11 @@ async function getFileFromCache(file) {
       file._tur = cached._tur;
       file._marka = cached._marka;
       file._model = cached._model;
+      file._deste = cached._deste;
+      file._ulke = cached._ulke;
+      file._kartSayisi = cached._kartSayisi;
+      file._boyut = cached._boyut;
+      file._indeks = cached._indeks;
       return true;
     }
   } catch (e) {
@@ -1850,7 +2016,12 @@ async function saveFileToCache(file) {
       _dil: file._dil,
       _tur: file._tur,
       _marka: file._marka,
-      _model: file._model
+      _model: file._model,
+      _deste: file._deste,
+      _ulke: file._ulke,
+      _kartSayisi: file._kartSayisi,
+      _boyut: file._boyut,
+      _indeks: file._indeks
     };
     store.put(data);
   } catch (e) {
@@ -1965,6 +2136,24 @@ async function processPreviewQueue() {
           if (basData.ozet && !file._ozet) file._ozet = basData.ozet;
           saveFileToCache(file);
         }
+        // İskambil-specific: extract from html if not yet done
+        if (gallery && gallery.id === 'iskambil' && !file._marka && file._htmlContent) {
+          const iskData = extractIskambilInfoFromHtml(file._htmlContent);
+          file._marka = iskData.marka;
+          file._deste = iskData.deste;
+          file._ulke = iskData.ulke;
+          file._durum = iskData.durum || file._durum;
+          file._basimYili = iskData.basimYili || file._basimYili;
+          file._kartSayisi = iskData.kartSayisi;
+          file._boyut = iskData.boyut;
+          file._indeks = iskData.indeks;
+          if (iskData.code) file._code = iskData.code;
+          if (iskData.title && !file._title) file._title = iskData.title;
+          if (iskData.subtitle && !file._subtitle) file._subtitle = iskData.subtitle;
+          if (iskData.ozet && !file._ozet) file._ozet = iskData.ozet;
+          if (iskData.image && !file._image) file._image = iskData.image;
+          saveFileToCache(file);
+        }
         updateCardUI(item);
         return;
       }
@@ -2056,6 +2245,24 @@ async function processPreviewQueue() {
           if (basData.title && !file._title) file._title = basData.title;
           if (basData.subtitle && !file._subtitle) file._subtitle = basData.subtitle;
           if (basData.ozet && !file._ozet) file._ozet = basData.ozet;
+          saveFileToCache(file);
+        }
+        // İskambil-specific: extract from cached html if not yet done
+        if (gallery && gallery.id === 'iskambil' && !file._marka && file._htmlContent) {
+          const iskData = extractIskambilInfoFromHtml(file._htmlContent);
+          file._marka = iskData.marka;
+          file._deste = iskData.deste;
+          file._ulke = iskData.ulke;
+          file._durum = iskData.durum || file._durum;
+          file._basimYili = iskData.basimYili || file._basimYili;
+          file._kartSayisi = iskData.kartSayisi;
+          file._boyut = iskData.boyut;
+          file._indeks = iskData.indeks;
+          if (iskData.code) file._code = iskData.code;
+          if (iskData.title && !file._title) file._title = iskData.title;
+          if (iskData.subtitle && !file._subtitle) file._subtitle = iskData.subtitle;
+          if (iskData.ozet && !file._ozet) file._ozet = iskData.ozet;
+          if (iskData.image && !file._image) file._image = iskData.image;
           saveFileToCache(file);
         }
         updateCardUI(item);
@@ -2172,6 +2379,24 @@ async function processPreviewQueue() {
           if (basData.ozet && !file._ozet) file._ozet = basData.ozet;
         }
 
+        // İskambil-specific extraction
+        if (gallery && gallery.id === 'iskambil') {
+          const iskData = extractIskambilInfoFromHtml(html);
+          file._marka = iskData.marka;
+          file._deste = iskData.deste;
+          file._ulke = iskData.ulke;
+          file._durum = iskData.durum || file._durum;
+          file._basimYili = iskData.basimYili || file._basimYili;
+          file._kartSayisi = iskData.kartSayisi;
+          file._boyut = iskData.boyut;
+          file._indeks = iskData.indeks;
+          if (iskData.code) file._code = iskData.code;
+          if (iskData.title && !file._title) file._title = iskData.title;
+          if (iskData.subtitle && !file._subtitle) file._subtitle = iskData.subtitle;
+          if (iskData.ozet && !file._ozet) file._ozet = iskData.ozet;
+          if (iskData.image && !file._image) file._image = iskData.image;
+        }
+
         saveFileToCache(file);
         updateCardUI(item);
         if (gallery) gallery.checkAndExtractCategory(file, card);
@@ -2229,8 +2454,8 @@ function updateCardUI(item) {
     const isKarma = (galleryId === 'allother');
     const isBasilsanat = (galleryId === 'basilsanat');
     const isIskambil = (galleryId === 'iskambil');
-    const nominalValue = isIskambil ? (file._model || '') : isBasilsanat ? (file._yayinevi || '') : isKarma ? titleText : (file._nominal || file._nominalDeger || '');
-    const tipiValue = isBasilsanat ? (file._tur || '') : isKarma ? subtitleText : (file._type || file._pulTipi || '');
+    const nominalValue = isIskambil ? (file._deste || '') : isBasilsanat ? (file._yayinevi || '') : isKarma ? titleText : (file._nominal || file._nominalDeger || '');
+    const tipiValue = isIskambil ? (file._ulke || '') : isBasilsanat ? (file._tur || '') : isKarma ? subtitleText : (file._type || file._pulTipi || '');
 
     const abbrevCountry = isIskambil ? (file._marka || '') : isBasilsanat ? (file._yazar || '') : normalizeCountryName(country);
 
@@ -2781,12 +3006,12 @@ class GalleryManager {
     const isIskambil = (galleryId === 'iskambil');
     const L = {
       ulke: isIskambil ? 'Marka' : isBasilsanat ? 'Yazar' : isKarma ? 'Üretim Yeri' : 'Ülke',
-      yil: isBasilsanat ? 'Basım Yılı' : isKarma ? 'Üretim Yılı' : 'Basım Yılı',
-      nominal: isIskambil ? 'Model' : isBasilsanat ? 'Yayınevi' : isKarma ? 'Parça Tanımı' : 'Nominal Değer',
-      tipi: isBasilsanat ? 'Tür' : isKarma ? 'Açıklama' : 'Pul Tipi',
+      yil: isIskambil ? 'Üretim Yılı' : isBasilsanat ? 'Basım Yılı' : isKarma ? 'Üretim Yılı' : 'Basım Yılı',
+      nominal: isIskambil ? 'Deste' : isBasilsanat ? 'Yayınevi' : isKarma ? 'Parça Tanımı' : 'Nominal Değer',
+      tipi: isIskambil ? 'Menşe' : isBasilsanat ? 'Tür' : isKarma ? 'Açıklama' : 'Pul Tipi',
     };
-    const nominalValue = isIskambil ? (file._model || initialTitle) : isBasilsanat ? (file._yayinevi || initialTitle) : isKarma ? initialTitle : (file._nominal || file._nominalDeger || '');
-    const tipiValue = isBasilsanat ? (file._tur || initialSub) : isKarma ? initialSub : (file._type || file._pulTipi || '');
+    const nominalValue = isIskambil ? (file._deste || initialTitle) : isBasilsanat ? (file._yayinevi || initialTitle) : isKarma ? initialTitle : (file._nominal || file._nominalDeger || '');
+    const tipiValue = isIskambil ? (file._ulke || '') : isBasilsanat ? (file._tur || initialSub) : isKarma ? initialSub : (file._type || file._pulTipi || '');
 
     const card = document.createElement('div');
     card.className = 'pdf-card reveal';
