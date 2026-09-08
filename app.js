@@ -1154,6 +1154,10 @@ function extractStampInfoFromHtml(html) {
     if (isDamgali) durum = 'Damgalı';
     else if (isDamgasiz) durum = 'Damgasız';
 }
+  return {
+    title, subtitle, image, code, country, year, nominalDeger, pulTipi, basimYili, basimYeri, durum, ozet
+  };
+}
 // ─── BASILSANAT (PRINTED WORKS) EXTRACTOR ────────────────────────────────────
 function extractBasilsanatInfoFromHtml(html) {
   const EMPTY = { title: '', subtitle: '', image: '', code: '', yazar: '', yayinevi: '', dil: '', tur: '', year: '', basimYili: '', basimYeri: '', durum: '', ozet: '' };
