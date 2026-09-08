@@ -709,7 +709,7 @@ function extractStampInfoFromHtml(html) {
     for (const k of keys) {
       const low = k.toLowerCase();
       for (const tk of Object.keys(tableData)) {
-        if (tk.includes(low) || low.includes(tk)) return tableData[tk];
+        if (tk === low || tk.startsWith(low + ' ') || tk.endsWith(' ' + low) || low === tk || low.startsWith(tk + ' ') || low.endsWith(' ' + tk)) return tableData[tk];
       }
     }
     return '';
@@ -1212,7 +1212,7 @@ function extractBasilsanatInfoFromHtml(html) {
     for (const k of keys) {
       const low = k.toLowerCase();
       for (const tk of Object.keys(tableData)) {
-        if (tk.includes(low) || low.includes(tk)) return tableData[tk];
+        if (tk === low || tk.startsWith(low + ' ') || tk.endsWith(' ' + low) || low === tk || low.startsWith(tk + ' ') || low.endsWith(' ' + tk)) return tableData[tk];
       }
     }
     return '';
@@ -1432,7 +1432,7 @@ function extractIskambilInfoFromHtml(html) {
     for (const k of keys) {
       const low = k.toLowerCase();
       for (const tk of Object.keys(tableData)) {
-        if (tk.includes(low) || low.includes(tk)) return tableData[tk];
+        if (tk === low || tk.startsWith(low + ' ') || tk.endsWith(' ' + low) || low === tk || low.startsWith(tk + ' ') || low.endsWith(' ' + tk)) return tableData[tk];
       }
     }
     return '';
@@ -1623,7 +1623,7 @@ function extractPlakInfoFromHtml(html) {
     for (const k of keys) {
       const low = k.toLowerCase();
       for (const tk of Object.keys(tableData)) {
-        if (tk.includes(low) || low.includes(tk)) return tableData[tk];
+        if (tk === low || tk.startsWith(low + ' ') || tk.endsWith(' ' + low) || low === tk || low.startsWith(tk + ' ') || low.endsWith(' ' + tk)) return tableData[tk];
       }
     }
     return '';
@@ -1844,7 +1844,7 @@ function extractLegoverseInfoFromHtml(html) {
     for (const k of keys) {
       const low = k.toLowerCase();
       for (const tk of Object.keys(tableData)) {
-        if (tk.includes(low) || low.includes(tk)) return tableData[tk];
+        if (tk === low || tk.startsWith(low + ' ') || tk.endsWith(' ' + low) || low === tk || low.startsWith(tk + ' ') || low.endsWith(' ' + tk)) return tableData[tk];
       }
     }
     return '';
