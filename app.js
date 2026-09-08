@@ -1154,10 +1154,6 @@ function extractBasilsanatInfoFromHtml(html) {
   let title = '', subtitle = '', image = '', code = '';
   let yazar = '', yayinevi = '', dil = '', tur = '', year = '', basimYili = '', basimYeri = '', durum = '', ozet = '';
 
-  const bodyText = doc.body ? doc.body.textContent || '' : '';
-  const allText = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-  const scanText = (bodyText + ' ' + allText).toLowerCase();
-
   // ── TABLE KEY-VALUE EXTRACTION ──
   const tableData = {};
   const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
@@ -1176,6 +1172,7 @@ function extractBasilsanatInfoFromHtml(html) {
       if (key && val) tableData[key.toLowerCase().trim()] = val;
     }
   }
+  // Also scan DOM table cells
   const cells = doc.querySelectorAll('td, th');
   for (let i = 0; i < cells.length; i++) {
     const t = cells[i].textContent.trim();
@@ -1195,25 +1192,30 @@ function extractBasilsanatInfoFromHtml(html) {
     return '';
   };
 
-  // ── CODE ──
-  const kodEl = doc.querySelector('.kod');
-  if (kodEl) {
-    code = kodEl.textContent.trim();
+  // ── CODE (.col-num, .collection-number, .kod, or <title>) ──
+  const colNumEl = doc.querySelector('.col-num');
+  if (colNumEl) {
+    code = colNumEl.textContent.trim();
   } else {
-    const codeEl2 = doc.querySelector('.collection-number');
-    if (codeEl2) {
-      code = codeEl2.textContent.trim();
+    const kodEl = doc.querySelector('.kod');
+    if (kodEl) {
+      code = kodEl.textContent.trim();
     } else {
-      const titleTag = doc.querySelector('title');
-      if (titleTag) {
-        const rawTitle = titleTag.textContent.trim();
-        const codeMatch = rawTitle.match(/\b(KE\w*\d+)\b/i) || rawTitle.match(/\b(M[GCKR]\w*\d+)\b/i);
-        if (codeMatch) code = codeMatch[1].trim();
+      const codeEl2 = doc.querySelector('.collection-number');
+      if (codeEl2) {
+        code = codeEl2.textContent.trim();
+      } else {
+        const titleTag = doc.querySelector('title');
+        if (titleTag) {
+          const rawTitle = titleTag.textContent.trim();
+          const codeMatch = rawTitle.match(/\b(KE\w*\d+)\b/i) || rawTitle.match(/\b(M[GCKP]\w*\d+)\b/i);
+          if (codeMatch) code = codeMatch[1].trim();
+        }
       }
     }
   }
 
-  // ── TITLE ──
+  // ── TITLE (h1 first) ──
   const h1El = doc.querySelector('h1');
   if (h1El) title = h1El.textContent.trim();
   if (!title) {
@@ -1231,7 +1233,7 @@ function extractBasilsanatInfoFromHtml(html) {
       const rawTitle = titleTag.textContent.trim();
       const parts = rawTitle.split(/[·•|—–]/);
       if (parts.length >= 2) {
-        title = parts.find(p => p.trim() && !/^KE\d+$/i.test(p.trim()) && !/^MG[A-Z]?\d+$/i.test(p.trim()) && !/GÜVENTÜRK|KOLEKSİYON/i.test(p.trim())) || '';
+        title = parts.find(p => p.trim() && !/^(KE|MG)\w*\d+$/i.test(p.trim()) && !/GÜVENTÜRK|KOLEKSİYON/i.test(p.trim())) || '';
         title = title.trim();
       } else if (rawTitle && !/GÜVENTÜRK|KOLEKSİYON/i.test(rawTitle)) {
         title = rawTitle;
@@ -1239,45 +1241,119 @@ function extractBasilsanatInfoFromHtml(html) {
     }
   }
 
-  // ── SUBTITLE ──
+  // ── SUBTITLE (.subtitle element) ──
   const subEl = doc.querySelector('.subtitle, .sub, .description, .detail, .info');
   if (subEl) subtitle = subEl.textContent.trim();
 
-  // ── IMAGE ──
-  const imgEl = doc.querySelector('img');
-  if (imgEl) image = imgEl.getAttribute('src') || '';
+  // ── IMAGE (.hero img first, then any img) ──
+  const heroImg = doc.querySelector('.hero img');
+  if (heroImg) {
+    image = heroImg.getAttribute('src') || '';
+  } else {
+    const imgEl = doc.querySelector('img');
+    if (imgEl) image = imgEl.getAttribute('src') || '';
+  }
 
   // ── YAZAR (Author) ──
-  yazar = findTableValue('yazar', 'author', 'yazan', 'müellif', 'kaleme alan', 'editör');
+  // Match "Yazar / Çizer", "Yazar", "Author", etc.
+  yazar = findTableValue('yazar / çizer', 'yazar / cizer', 'yazar', 'author', 'yazan', 'müellif', 'kaleme alan', 'editör');
+  // Also try DOM-based search for "Yazar / Çizer" pattern
+  if (!yazar) {
+    const allTh = doc.querySelectorAll('th');
+    for (const th of allTh) {
+      const thText = th.textContent.trim().toLowerCase();
+      if (thText.includes('yazar')) {
+        const td = th.nextElementSibling;
+        if (td) yazar = td.textContent.trim();
+        break;
+      }
+    }
+  }
 
   // ── YAYINEVI (Publisher) ──
-  yayinevi = findTableValue('yayınevi', 'yayinevi', 'yayın evi', 'publisher', 'yayın', 'neşriyat');
+  // Match "Yayıncı", "Yayınevi", "Publisher", etc.
+  yayinevi = findTableValue('yayıncı', 'yayinevi', 'yayınevi', 'yayın evi', 'publisher', 'yayın', 'neşriyat');
+  if (!yayinevi) {
+    const allTh = doc.querySelectorAll('th');
+    for (const th of allTh) {
+      const thText = th.textContent.trim().toLowerCase();
+      if (thText.includes('yay') && (thText.includes('cı') || thText.includes('ci') || thText.includes('nevi'))) {
+        const td = th.nextElementSibling;
+        if (td) yayinevi = td.textContent.trim();
+        break;
+      }
+    }
+  }
 
   // ── DIL (Language) ──
   dil = findTableValue('dil', 'language', 'lisân', 'lisan');
 
   // ── TÜR (Genre/Type) ──
   tur = findTableValue('tür', 'tur', 'type', 'türü', 'kategori', 'category', 'tür / kategori');
+  if (!tur) {
+    const allTh = doc.querySelectorAll('th');
+    for (const th of allTh) {
+      const thText = th.textContent.trim().toLowerCase();
+      if (thText === 'tür' || thText === 'tür / kategori' || thText.includes('tür')) {
+        const td = th.nextElementSibling;
+        if (td) { tur = td.textContent.trim(); break; }
+      }
+    }
+  }
 
   // ── BASIM YILI (Year) ──
-  year = findTableValue('basım yılı', 'yıl', 'year', 'yayın yılı', 'basim yili', 'tarih', 'basım tarihi', 'basım yılı / dönemi', 'basim yili / donemi');
+  year = findTableValue('basım yılı', 'basim yili', 'basım yılı / dönemi', 'yıl', 'year', 'yayın yılı', 'basım tarihi', 'tarih');
   if (!year) {
-    const yearMatch = scanText.match(/\b((?:18|19|20)\d{2})\b/);
+    const allTh = doc.querySelectorAll('th');
+    for (const th of allTh) {
+      const thText = th.textContent.trim().toLowerCase();
+      if (thText.includes('bas') && thText.includes('yıl')) {
+        const td = th.nextElementSibling;
+        if (td) { year = td.textContent.trim(); break; }
+      }
+    }
+  }
+  if (!year) {
+    const yearMatch = (doc.body ? doc.body.textContent : '').match(/\b((?:18|19|20)\d{2})\b/);
     if (yearMatch) year = yearMatch[1];
   }
   basimYili = year;
 
   // ── BASIM YERI ──
-  basimYeri = findTableValue('basım yeri', 'basim yeri', 'yayın yeri', 'yayınevi yeri', 'yer', 'place');
+  basimYeri = findTableValue('basım yeri', 'basim yeri', 'yayın yeri', 'satın alma yeri', 'yer', 'place');
 
   // ── DURUM (Condition) ──
-  durum = findTableValue('durum', 'condition', 'state', 'kalite', 'kondisyon');
+  durum = findTableValue('genel durum', 'durum', 'condition', 'state', 'kalite', 'kondisyon', 'kapak durumu');
+  if (!durum) {
+    const allTh = doc.querySelectorAll('th');
+    for (const th of allTh) {
+      const thText = th.textContent.trim().toLowerCase();
+      if (thText.includes('durum')) {
+        const td = th.nextElementSibling;
+        if (td) { durum = td.textContent.trim(); break; }
+      }
+    }
+  }
 
   // ── OZET (Summary) ──
-  const metaDesc = doc.querySelector('meta[name="description"]');
-  if (metaDesc) ozet = metaDesc.getAttribute('content') || '';
+  // Look for "Tanıtım Notu" section first
+  const allH2 = doc.querySelectorAll('h2');
+  for (const h2 of allH2) {
+    if (h2.textContent.trim().toLowerCase().includes('tanıt') || h2.textContent.trim().toLowerCase().includes('not')) {
+      const section = h2.closest('.section') || h2.parentElement;
+      if (section) {
+        const noteEl = section.querySelector('.note, p, .summary');
+        if (noteEl) ozet = noteEl.textContent.trim();
+      }
+      break;
+    }
+  }
   if (!ozet) {
-    const summaryEl = doc.querySelector('.summary, .overview, .description, .history, .ozet');
+    const metaDesc = doc.querySelector('meta[name="description"]');
+    if (metaDesc) ozet = metaDesc.getAttribute('content') || '';
+  }
+  if (!ozet) {
+    const summaryEl = doc.querySelector('.summary, .overview, .description, .history, .ozet, .note');
     if (summaryEl) ozet = summaryEl.textContent.trim();
   }
   if (!ozet) {
@@ -1853,6 +1929,7 @@ async function processPreviewQueue() {
           file._tur = basData.tur;
           file._durum = basData.durum || file._durum;
           file._basimYeri = basData.basimYeri || file._basimYeri;
+          if (basData.code) file._code = basData.code;
           if (basData.title && !file._title) file._title = basData.title;
           if (basData.subtitle && !file._subtitle) file._subtitle = basData.subtitle;
           if (basData.ozet && !file._ozet) file._ozet = basData.ozet;
@@ -1934,6 +2011,21 @@ async function processPreviewQueue() {
           file._rarePieces = legoData.rarePieces;
           if (legoData.setName) file._title = legoData.setName;
           if (legoData.theme) file._subtitle = legoData.subTheme ? `${legoData.theme} — ${legoData.subTheme}` : legoData.theme;
+          saveFileToCache(file);
+        }
+        // Basilsanat-specific: extract from cached html if not yet done
+        if (gallery && gallery.id === 'basilsanat' && !file._yazar && file._htmlContent) {
+          const basData = extractBasilsanatInfoFromHtml(file._htmlContent);
+          file._yazar = basData.yazar;
+          file._yayinevi = basData.yayinevi;
+          file._dil = basData.dil;
+          file._tur = basData.tur;
+          file._durum = basData.durum || file._durum;
+          file._basimYeri = basData.basimYeri || file._basimYeri;
+          if (basData.code) file._code = basData.code;
+          if (basData.title && !file._title) file._title = basData.title;
+          if (basData.subtitle && !file._subtitle) file._subtitle = basData.subtitle;
+          if (basData.ozet && !file._ozet) file._ozet = basData.ozet;
           saveFileToCache(file);
         }
         updateCardUI(item);
@@ -2044,6 +2136,7 @@ async function processPreviewQueue() {
           file._tur = basData.tur;
           file._durum = basData.durum || file._durum;
           file._basimYeri = basData.basimYeri || file._basimYeri;
+          if (basData.code) file._code = basData.code;
           if (basData.title && !file._title) file._title = basData.title;
           if (basData.subtitle && !file._subtitle) file._subtitle = basData.subtitle;
           if (basData.ozet && !file._ozet) file._ozet = basData.ozet;
@@ -2100,7 +2193,7 @@ function updateCardUI(item) {
     const year = file._year || '';
     const titleText = file._title || '';
     const subtitleText = file._subtitle || '';
-    const fileNameNoExt = (file.name || '').replace(/\.(html|htm|pdf)$/i, '');
+    const fileNameNoExt = (file.name || '').replace(/\.(html|htm|pdf)$/i, '').toUpperCase();
 
     // Dynamic values based on gallery type
     const isKarma = (galleryId === 'allother');
@@ -2659,7 +2752,7 @@ class GalleryManager {
     card.dataset.mimeType = file.mimeType || '';
     if (file.isMock) card.dataset.mock = '1';
 
-    const fileNameNoExt = file.name.replace(/\.(html|htm|pdf)$/i, '');
+    const fileNameNoExt = file.name.replace(/\.(html|htm|pdf)$/i, '').toUpperCase();
     card.innerHTML = `
       <div class="pdf-card-thumb">
         <div class="pdf-icon-frame ${bgClass}">
