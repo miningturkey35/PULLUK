@@ -1916,8 +1916,8 @@ async function processPreviewQueue() {
           if (legoData.theme) file._subtitle = legoData.subTheme ? `${legoData.theme} — ${legoData.subTheme}` : legoData.theme;
           saveFileToCache(file);
         }
-        // Basilsanat-specific: extract from html if not yet done
-        if (gallery && gallery.id === 'basilsanat' && !file._yazar && file._htmlContent) {
+        // Basilsanat-specific: extract from html
+        if (gallery && gallery.id === 'basilsanat' && file._htmlContent) {
           const basData = extractBasilsanatInfoFromHtml(file._htmlContent);
           file._yazar = basData.yazar;
           file._yayinevi = basData.yayinevi;
@@ -1931,8 +1931,8 @@ async function processPreviewQueue() {
           if (basData.ozet && !file._ozet) file._ozet = basData.ozet;
           saveFileToCache(file);
         }
-        // İskambil-specific: extract from html if not yet done
-        if (gallery && gallery.id === 'iskambil' && !file._marka && file._htmlContent) {
+        // İskambil-specific: extract from html
+        if (gallery && gallery.id === 'iskambil' && file._htmlContent) {
           const iskData = extractIskambilInfoFromHtml(file._htmlContent);
           file._marka = iskData.marka;
           file._deste = iskData.deste;
@@ -2027,8 +2027,8 @@ async function processPreviewQueue() {
           if (legoData.theme) file._subtitle = legoData.subTheme ? `${legoData.theme} — ${legoData.subTheme}` : legoData.theme;
           saveFileToCache(file);
         }
-        // Basilsanat-specific: extract from cached html if not yet done
-        if (gallery && gallery.id === 'basilsanat' && !file._yazar && file._htmlContent) {
+        // Basilsanat-specific: extract from cached html
+        if (gallery && gallery.id === 'basilsanat' && file._htmlContent) {
           const basData = extractBasilsanatInfoFromHtml(file._htmlContent);
           file._yazar = basData.yazar;
           file._yayinevi = basData.yayinevi;
@@ -2042,8 +2042,8 @@ async function processPreviewQueue() {
           if (basData.ozet && !file._ozet) file._ozet = basData.ozet;
           saveFileToCache(file);
         }
-        // İskambil-specific: extract from cached html if not yet done
-        if (gallery && gallery.id === 'iskambil' && !file._marka && file._htmlContent) {
+        // İskambil-specific: extract from cached html
+        if (gallery && gallery.id === 'iskambil' && file._htmlContent) {
           const iskData = extractIskambilInfoFromHtml(file._htmlContent);
           file._marka = iskData.marka;
           file._deste = iskData.deste;
@@ -2447,7 +2447,7 @@ class GalleryManager {
     if (this.els.loading) this.els.loading.style.display = 'flex';
 
     // 1. Instant loading from precompiled collection data
-    if (window.PULLUK_COLLECTION_DATA && window.PULLUK_COLLECTION_DATA[this.id]) {
+    if (window.PULLUK_COLLECTION_DATA && window.PULLUK_COLLECTION_DATA[this.id] && window.PULLUK_COLLECTION_DATA[this.id].length > 0) {
       this.allFiles = window.PULLUK_COLLECTION_DATA[this.id].map(p => {
         const f = { ...p };
         // Normalize country on load
