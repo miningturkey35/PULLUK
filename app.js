@@ -1153,234 +1153,90 @@ function extractStampInfoFromHtml(html) {
     const isDamgasiz = /damgas[ıi]z|uncancel|unused|kullan[ıi]lmam[ıi]ş/.test(scanText);
     if (isDamgali) durum = 'Damgalı';
     else if (isDamgasiz) durum = 'Damgasız';
-  }
-
-  // Normalize country name for consistent display
-  const normalizedCountry = normalizeCountryName(country);
-
-  return {
-    title, subtitle, image, code, country: normalizedCountry || country, year,
-    denomination: nominalDeger, typeInfo: pulTipi,
-    katalogNo: code, ulke: normalizedCountry || country, basimYili: year, basimYeri,
-    nominalDeger, pulTipi, ozet, durum
-  };
 }
 // ─── BASILSANAT (PRINTED WORKS) EXTRACTOR ────────────────────────────────────
 function extractBasilsanatInfoFromHtml(html) {
   const EMPTY = { title: '', subtitle: '', image: '', code: '', yazar: '', yayinevi: '', dil: '', tur: '', year: '', basimYili: '', basimYeri: '', durum: '', ozet: '' };
   if (!html) return EMPTY;
 
-  const cleanHtml = html
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '');
-
   const parser = new DOMParser();
-  const doc = parser.parseFromString(cleanHtml, 'text/html');
+  const doc = parser.parseFromString(html, 'text/html');
 
   let title = '', subtitle = '', image = '', code = '';
   let yazar = '', yayinevi = '', dil = '', tur = '', year = '', basimYili = '', basimYeri = '', durum = '', ozet = '';
 
-  // ── TABLE KEY-VALUE EXTRACTION ──
-  const tableData = {};
-  const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
-  if (rows) {
-    for (const row of rows) {
-      const thMatches = row.match(/<th[^>]*>([\s\S]*?)<\/th>/gi);
-      const tdMatches = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
-      let key = '', val = '';
-      if (thMatches && tdMatches && tdMatches.length >= 1) {
-        key = thMatches[0].replace(/<[^>]+>/g, '').trim();
-        val = tdMatches[0].replace(/<[^>]+>/g, '').trim();
-      } else if (tdMatches && tdMatches.length >= 2) {
-        key = tdMatches[0].replace(/<[^>]+>/g, '').trim();
-        val = tdMatches[1].replace(/<[^>]+>/g, '').trim();
-      }
-      if (key && val) tableData[key.toLowerCase().trim()] = val;
-    }
-  }
-  // Also scan DOM table cells
-  const cells = doc.querySelectorAll('td, th');
-  for (let i = 0; i < cells.length; i++) {
-    const t = cells[i].textContent.trim();
-    const nextTd = cells[i].nextElementSibling;
-    if (nextTd && t.length < 60) {
-      tableData[t.toLowerCase().trim()] = nextTd.textContent.trim();
-    }
+  // ── CODE ──
+  const codeEl = doc.querySelector('.col-num, .coll-num, .kod');
+  if (codeEl) code = codeEl.textContent.trim();
+
+  // ── TITLE ──
+  const h1 = doc.querySelector('h1');
+  if (h1) title = h1.textContent.trim();
+
+  // ── SUBTITLE ──
+  const subEl = doc.querySelector('.subtitle');
+  if (subEl) subtitle = subEl.textContent.trim();
+
+  // ── IMAGE ──
+  const heroImg = doc.querySelector('.hero img');
+  if (heroImg) image = heroImg.getAttribute('src') || '';
+  if (!image) {
+    const anyImg = doc.querySelector('img');
+    if (anyImg) image = anyImg.getAttribute('src') || '';
   }
 
-  const findTableValue = (...keys) => {
-    for (const k of keys) {
-      const low = k.toLowerCase();
-      for (const tk of Object.keys(tableData)) {
-        if (tk === low || tk.startsWith(low + ' ') || tk.endsWith(' ' + low) || low === tk || low.startsWith(tk + ' ') || low.endsWith(' ' + tk)) return tableData[tk];
+  // ── TABLE FIELDS: find by <th> text → get sibling <td> ──
+  const getTdByTh = (...thTexts) => {
+    const allTh = doc.querySelectorAll('th');
+    for (const th of allTh) {
+      const thNorm = th.textContent.trim().toLowerCase()
+        .replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u')
+        .replace(/[öÖ]/g, 'o').replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g');
+      for (const target of thTexts) {
+        const tNorm = target.toLowerCase()
+          .replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u')
+          .replace(/[öÖ]/g, 'o').replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g');
+        if (thNorm === tNorm || thNorm.startsWith(tNorm) || tNorm.startsWith(thNorm)) {
+          const td = th.nextElementSibling;
+          if (td && td.tagName === 'TD') return td.textContent.trim();
+        }
       }
     }
     return '';
   };
 
-  // ── CODE (.col-num, .collection-number, .kod, or <title>) ──
-  const colNumEl = doc.querySelector('.col-num');
-  if (colNumEl) {
-    code = colNumEl.textContent.trim();
-  } else {
-    const kodEl = doc.querySelector('.kod');
-    if (kodEl) {
-      code = kodEl.textContent.trim();
-    } else {
-      const codeEl2 = doc.querySelector('.collection-number');
-      if (codeEl2) {
-        code = codeEl2.textContent.trim();
-      } else {
-        const titleTag = doc.querySelector('title');
-        if (titleTag) {
-          const rawTitle = titleTag.textContent.trim();
-          const codeMatch = rawTitle.match(/\b(KE\w*\d+)\b/i) || rawTitle.match(/\b(M[GCKP]\w*\d+)\b/i);
-          if (codeMatch) code = codeMatch[1].trim();
-        }
-      }
-    }
+  tur = getTdByTh('tür', 'tur', 'kategori', 'category', 'type');
+  yazar = getTdByTh('yazar / çizer', 'yazar / cizer', 'yazar', 'author', 'çizer', 'cizer');
+  yayinevi = getTdByTh('yayıncı', 'yayinevi', 'yayın evi', 'publisher', 'yayın', 'yayinci');
+  dil = getTdByTh('dil', 'language');
+  basimYili = getTdByTh('basım yılı', 'basim yili', 'yıl', 'yil', 'year', 'basim yili', 'basım yılı');
+  basimYeri = getTdByTh('basım yeri', 'basim yeri', 'yer', 'place');
+  durum = getTdByTh('genel durum', 'durum', 'condition');
+
+  // ── YEAR from text if not found ──
+  if (!basimYili) {
+    const bodyText = doc.body ? doc.body.textContent : '';
+    const yearMatch = bodyText.match(/\b((?:18|19|20)\d{2})\b/);
+    if (yearMatch) basimYili = yearMatch[1];
   }
+  year = basimYili;
 
-  // ── TITLE (h1 first) ──
-  const h1El = doc.querySelector('h1');
-  if (h1El) title = h1El.textContent.trim();
-  if (!title) {
-    for (const sel of ['.title', '.name', 'h2', 'h3', '.stamp-title', '[itemprop="name"]']) {
-      const el = doc.querySelector(sel);
-      if (el) {
-        const text = el.textContent.trim();
-        if (text && text.length > 1 && text.length < 200) { title = text; break; }
-      }
-    }
-  }
-  if (!title) {
-    const titleTag = doc.querySelector('title');
-    if (titleTag) {
-      const rawTitle = titleTag.textContent.trim();
-      const parts = rawTitle.split(/[·•|—–]/);
-      if (parts.length >= 2) {
-        title = parts.find(p => p.trim() && !/^(KE|MG)\w*\d+$/i.test(p.trim()) && !/GÜVENTÜRK|KOLEKSİYON/i.test(p.trim())) || '';
-        title = title.trim();
-      } else if (rawTitle && !/GÜVENTÜRK|KOLEKSİYON/i.test(rawTitle)) {
-        title = rawTitle;
-      }
-    }
-  }
-
-  // ── SUBTITLE (.subtitle element) ──
-  const subEl = doc.querySelector('.subtitle, .sub, .description, .detail, .info');
-  if (subEl) subtitle = subEl.textContent.trim();
-
-  // ── IMAGE (.hero img first, then any img) ──
-  const heroImg = doc.querySelector('.hero img');
-  if (heroImg) {
-    image = heroImg.getAttribute('src') || '';
-  } else {
-    const imgEl = doc.querySelector('img');
-    if (imgEl) image = imgEl.getAttribute('src') || '';
-  }
-
-  // ── YAZAR (Author) ──
-  // Match "Yazar / Çizer", "Yazar", "Author", etc.
-  yazar = findTableValue('yazar / çizer', 'yazar / cizer', 'yazar', 'author', 'yazan', 'müellif', 'kaleme alan', 'editör');
-  // Also try DOM-based search for "Yazar / Çizer" pattern
-  if (!yazar) {
-    const allTh = doc.querySelectorAll('th');
-    for (const th of allTh) {
-      const thText = th.textContent.trim().toLowerCase();
-      if (thText.includes('yazar')) {
-        const td = th.nextElementSibling;
-        if (td) yazar = td.textContent.trim();
-        break;
-      }
-    }
-  }
-
-  // ── YAYINEVI (Publisher) ──
-  // Match "Yayıncı", "Yayınevi", "Publisher", etc.
-  yayinevi = findTableValue('yayıncı', 'yayinevi', 'yayınevi', 'yayın evi', 'publisher', 'yayın', 'neşriyat');
-  if (!yayinevi) {
-    const allTh = doc.querySelectorAll('th');
-    for (const th of allTh) {
-      const thText = th.textContent.trim().toLowerCase();
-      if (thText.includes('yay') && (thText.includes('cı') || thText.includes('ci') || thText.includes('nevi'))) {
-        const td = th.nextElementSibling;
-        if (td) yayinevi = td.textContent.trim();
-        break;
-      }
-    }
-  }
-
-  // ── DIL (Language) ──
-  dil = findTableValue('dil', 'language', 'lisân', 'lisan');
-
-  // ── TÜR (Genre/Type) ──
-  tur = findTableValue('tür', 'tur', 'type', 'türü', 'kategori', 'category', 'tür / kategori');
-  if (!tur) {
-    const allTh = doc.querySelectorAll('th');
-    for (const th of allTh) {
-      const thText = th.textContent.trim().toLowerCase();
-      if (thText === 'tür' || thText === 'tür / kategori' || thText.includes('tür')) {
-        const td = th.nextElementSibling;
-        if (td) { tur = td.textContent.trim(); break; }
-      }
-    }
-  }
-
-  // ── BASIM YILI (Year) ──
-  year = findTableValue('basım yılı', 'basim yili', 'basım yılı / dönemi', 'yıl', 'year', 'yayın yılı', 'basım tarihi', 'tarih');
-  if (!year) {
-    const allTh = doc.querySelectorAll('th');
-    for (const th of allTh) {
-      const thText = th.textContent.trim().toLowerCase();
-      if (thText.includes('bas') && thText.includes('yıl')) {
-        const td = th.nextElementSibling;
-        if (td) { year = td.textContent.trim(); break; }
-      }
-    }
-  }
-  if (!year) {
-    const yearMatch = (doc.body ? doc.body.textContent : '').match(/\b((?:18|19|20)\d{2})\b/);
-    if (yearMatch) year = yearMatch[1];
-  }
-  basimYili = year;
-
-  // ── BASIM YERI ──
-  basimYeri = findTableValue('basım yeri', 'basim yeri', 'yayın yeri', 'satın alma yeri', 'yer', 'place');
-
-  // ── DURUM (Condition) ──
-  durum = findTableValue('genel durum', 'durum', 'condition', 'state', 'kalite', 'kondisyon', 'kapak durumu');
-  if (!durum) {
-    const allTh = doc.querySelectorAll('th');
-    for (const th of allTh) {
-      const thText = th.textContent.trim().toLowerCase();
-      if (thText.includes('durum')) {
-        const td = th.nextElementSibling;
-        if (td) { durum = td.textContent.trim(); break; }
-      }
-    }
-  }
-
-  // ── OZET (Summary) ──
-  // Look for "Tanıtım Notu" section first
+  // ── ÖZET: look for .note or paragraph after h2 containing "tanıt" or "not" ──
   const allH2 = doc.querySelectorAll('h2');
   for (const h2 of allH2) {
-    if (h2.textContent.trim().toLowerCase().includes('tanıt') || h2.textContent.trim().toLowerCase().includes('not')) {
+    const h2Text = h2.textContent.trim().toLowerCase();
+    if (h2Text.includes('tani̇t') || h2Text.includes('tanit') || h2Text.includes('not') || h2Text.includes('aciklama') || h2Text.includes('açıklama')) {
       const section = h2.closest('.section') || h2.parentElement;
       if (section) {
-        const noteEl = section.querySelector('.note, p, .summary');
+        const noteEl = section.querySelector('.note p, .note, p');
         if (noteEl) ozet = noteEl.textContent.trim();
       }
       break;
     }
   }
   if (!ozet) {
-    const metaDesc = doc.querySelector('meta[name="description"]');
-    if (metaDesc) ozet = metaDesc.getAttribute('content') || '';
-  }
-  if (!ozet) {
-    const summaryEl = doc.querySelector('.summary, .overview, .description, .history, .ozet, .note');
-    if (summaryEl) ozet = summaryEl.textContent.trim();
+    const noteEl = doc.querySelector('.note p, .note');
+    if (noteEl) ozet = noteEl.textContent.trim();
   }
   if (!ozet) {
     const firstP = doc.querySelector('p');
@@ -1399,156 +1255,95 @@ function extractIskambilInfoFromHtml(html) {
   const EMPTY = { title: '', subtitle: '', image: '', code: '', marka: '', deste: '', basimYili: '', ulke: '', durum: '', kartSayisi: '', boyut: '', indeks: '', ozet: '' };
   if (!html) return EMPTY;
 
-  const cleanHtml = html
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<script[\s\S]*?<\/script>/gi, '');
-
   const parser = new DOMParser();
-  const doc = parser.parseFromString(cleanHtml, 'text/html');
+  const doc = parser.parseFromString(html, 'text/html');
 
   let title = '', subtitle = '', image = '', code = '';
   let marka = '', deste = '', basimYili = '', ulke = '', durum = '', kartSayisi = '', boyut = '', indeks = '', ozet = '';
 
-  // ── TABLE KEY-VALUE EXTRACTION ──
-  const tableData = {};
-  const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
-  if (rows) {
-    for (const row of rows) {
-      const thMatches = row.match(/<th[^>]*>([\s\S]*?)<\/th>/gi);
-      const tdMatches = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
-      let key = '', val = '';
-      if (thMatches && tdMatches && tdMatches.length >= 1) {
-        key = thMatches[0].replace(/<[^>]+>/g, '').trim();
-        val = tdMatches[0].replace(/<[^>]+>/g, '').trim();
-      } else if (tdMatches && tdMatches.length >= 2) {
-        key = tdMatches[0].replace(/<[^>]+>/g, '').trim();
-        val = tdMatches[1].replace(/<[^>]+>/g, '').trim();
-      }
-      if (key && val) tableData[key.toLowerCase().trim()] = val;
-    }
+  // ── CODE ──
+  const codeEl = doc.querySelector('.coll-num, .col-num, .kod');
+  if (codeEl) code = codeEl.textContent.trim();
+
+  // ── TITLE ──
+  const h1 = doc.querySelector('h1');
+  if (h1) title = h1.textContent.trim();
+
+  // ── SUBTITLE ──
+  const subEl = doc.querySelector('.subtitle');
+  if (subEl) subtitle = subEl.textContent.trim();
+
+  // ── IMAGE ──
+  const heroImg = doc.querySelector('.hero img');
+  if (heroImg) image = heroImg.getAttribute('src') || '';
+  if (!image) {
+    const anyImg = doc.querySelector('img');
+    if (anyImg) image = anyImg.getAttribute('src') || '';
   }
 
-  const findTableValue = (...keys) => {
-    for (const k of keys) {
-      const low = k.toLowerCase();
-      for (const tk of Object.keys(tableData)) {
-        if (tk === low || tk.startsWith(low + ' ') || tk.endsWith(' ' + low) || low === tk || low.startsWith(tk + ' ') || low.endsWith(' ' + tk)) return tableData[tk];
+  // ── TABLE FIELDS: find by <th> text → get sibling <td> ──
+  const getTdByTh = (...thTexts) => {
+    const allTh = doc.querySelectorAll('th');
+    for (const th of allTh) {
+      const thNorm = th.textContent.trim().toLowerCase()
+        .replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u')
+        .replace(/[öÖ]/g, 'o').replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g');
+      for (const target of thTexts) {
+        const tNorm = target.toLowerCase()
+          .replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u')
+          .replace(/[öÖ]/g, 'o').replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g');
+        if (thNorm === tNorm || thNorm.startsWith(tNorm) || tNorm.startsWith(thNorm)) {
+          const td = th.nextElementSibling;
+          if (td && td.tagName === 'TD') return td.textContent.trim();
+        }
       }
     }
     return '';
   };
 
-  // ── CODE (.coll-num) ──
-  const colNumEl = doc.querySelector('.coll-num, .col-num, .kod');
-  if (colNumEl) code = colNumEl.textContent.trim();
+  marka = getTdByTh('marka / uretici', 'marka / yetici', 'marka', 'manufacturer', 'brand');
+  deste = getTdByTh('deste / pattern', 'deste', 'pattern', 'deck');
+  basimYili = getTdByTh('uretim yili', 'uretim yili', 'yil', 'yil', 'year');
+  ulke = getTdByTh('uretim yeri', 'uretim yeri', 'yer', 'place', 'country');
+  durum = getTdByTh('genel durum', 'durum', 'condition');
+  kartSayisi = getTdByTh('kart sayisi', 'kart sayisi', 'card count', 'kart adedi');
+  boyut = getTdByTh('boyut', 'size', 'ebat');
+  indeks = getTdByTh('indis', 'index', 'indeks');
 
-  // ── TITLE (<h1>) ──
-  const h1 = doc.querySelector('h1');
-  if (h1) title = h1.textContent.trim();
-  if (!title) {
-    const titleEl = doc.querySelector('title');
-    if (titleEl) title = titleEl.textContent.trim().split('?')[0].replace(/^[^ ]* /, '').trim();
-  }
-
-  // ── SUBTITLE (.subtitle) ──
-  const subEl = doc.querySelector('.subtitle, .sub');
-  if (subEl) subtitle = subEl.textContent.trim();
-
-  // ── IMAGE (.hero img) ──
-  const heroImg = doc.querySelector('.hero img');
-  if (heroImg) image = heroImg.getAttribute('src') || '';
-  if (!image) {
-    const imgEl = doc.querySelector('img');
-    if (imgEl) image = imgEl.getAttribute('src') || '';
-  }
-
-  // ── MARKA (Brand) ──
-  marka = findTableValue('marka', 'marka / üretici', 'manufacturer', 'brand');
-  if (!marka) {
-    // Try subtitle — often "Rider Back — Standard Size — USPCC 2013"
-    if (subtitle) {
-      const parts = subtitle.split(/[—–\-]+/).map(s => s.trim());
-      if (parts.length >= 3) marka = parts[2]; // USPCC 2013
-      else if (parts.length >= 1) marka = parts[parts.length - 1];
-    }
-  }
-  // Strip year from marka if present
-  if (marka) {
-    const yearMatch = marka.match(/\b(\d{4})\b/);
-    if (yearMatch) {
-      if (!basimYili) basimYili = yearMatch[1];
-      marka = marka.replace(/\b\d{4}\b/, '').trim().replace(/\s*[-–—]\s*$/, '').trim();
-    }
-  }
-
-  // ── DESTE (Deck/Pattern) ──
-  deste = findTableValue('deste', 'deste / pattern', 'pattern', 'deck');
-
-  // ── ÜRETİM YILI (Production Year) ──
-  basimYili = findTableValue('üretim yılı', 'uretim yili', 'yıl', 'yil', 'year', 'basım yılı');
+  // ── YEAR from text if not found ──
   if (!basimYili) {
-    const yearMatch = (doc.body ? doc.body.textContent : '').match(/\b((?:18|19|20)\d{2})\b/);
+    const bodyText = doc.body ? doc.body.textContent : '';
+    const yearMatch = bodyText.match(/\b((?:18|19|20)\d{2})\b/);
     if (yearMatch) basimYili = yearMatch[1];
   }
 
-  // ── ÜRETİM YERİ (Country) ──
-  ulke = findTableValue('üretim yeri', 'uretim yeri', 'menşe', 'menße', 'country', 'origin');
+  // ── COUNTRY from text if not found ──
   if (!ulke) {
-    // Extract country keywords
-    const bodyText = (doc.body ? doc.body.textContent : '');
-    if (/ABD|USA|United States/i.test(bodyText)) ulke = 'ABD';
-    else if (/İngiltere|England|UK|Britain/i.test(bodyText)) ulke = 'İngiltere';
-    else if (/Almanya|Germany/i.test(bodyText)) ulke = 'Almanya';
-    else if (/Avusturya|Austria/i.test(bodyText)) ulke = 'Avusturya';
-    else if (/İtalya|Italy/i.test(bodyText)) ulke = 'İtalya';
-    else if (/Fransa|France/i.test(bodyText)) ulke = 'Fransa';
+    const bodyText = doc.body ? doc.body.textContent : '';
+    if (/abd|usa|united states/i.test(bodyText)) ulke = 'ABD';
+    else if (/ingiltere|england|uk|britain/i.test(bodyText)) ulke = 'İngiltere';
+    else if (/almanya|germany/i.test(bodyText)) ulke = 'Almanya';
+    else if (/avusturya|austria/i.test(bodyText)) ulke = 'Avusturya';
+    else if (/italya|italy/i.test(bodyText)) ulke = 'İtalya';
+    else if (/fransa|france/i.test(bodyText)) ulke = 'Fransa';
   }
-
-  // ── DURUM (Condition) ──
-  durum = findTableValue('genel durum', 'durum', 'condition', 'state', 'kondisyon');
-  if (!durum) {
-    const allTh = doc.querySelectorAll('th');
-    for (const th of allTh) {
-      const thText = th.textContent.trim().toLowerCase();
-      if (thText.includes('durum')) {
-        const td = th.nextElementSibling;
-        if (td) { durum = td.textContent.trim(); break; }
-      }
-    }
-  }
-
-  // ── KART SAYISI ──
-  kartSayisi = findTableValue('kart sayısı', 'kart sayisi', 'card count', 'kart adedi');
-
-  // ── BOYUT ──
-  boyut = findTableValue('boyut', 'size', 'ebat');
-
-  // ── İNDEKS ──
-  indeks = findTableValue('indis', 'index', 'indeks');
 
   // ── ÖZET ──
   const allH2 = doc.querySelectorAll('h2');
   for (const h2 of allH2) {
     const h2Text = h2.textContent.trim().toLowerCase();
-    if (h2Text.includes('tanıt') || h2Text.includes('not') || h2Text.includes('açıklama')) {
+    if (h2Text.includes('tani̇t') || h2Text.includes('tanit') || h2Text.includes('not') || h2Text.includes('aciklama') || h2Text.includes('açıklama')) {
       const section = h2.closest('.section') || h2.parentElement;
       if (section) {
-        const noteEl = section.querySelector('.note, p, .summary');
+        const noteEl = section.querySelector('.note p, .note, p');
         if (noteEl) ozet = noteEl.textContent.trim();
       }
       break;
     }
   }
   if (!ozet) {
-    const summaryEl = doc.querySelector('.note, .summary, .overview');
-    if (summaryEl) ozet = summaryEl.textContent.trim();
-  }
-  if (!ozet) {
-    const firstP = doc.querySelector('p');
-    if (firstP) {
-      const pText = firstP.textContent.trim();
-      if (pText.length > 20) ozet = pText.substring(0, 300);
-    }
+    const noteEl = doc.querySelector('.note p, .note');
+    if (noteEl) ozet = noteEl.textContent.trim();
   }
 
   return {
