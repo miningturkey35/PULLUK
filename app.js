@@ -2475,7 +2475,7 @@ class GalleryManager {
       if (this.els.loading) this.els.loading.style.display = 'none';
     }, 8000);
 
-    const hasPrecompiled = Boolean(window.PULLUK_COLLECTION_DATA && window.PULLUK_COLLECTION_DATA[this.id]);
+    const hasPrecompiled = Boolean(window.PULLUK_COLLECTION_DATA && window.PULLUK_COLLECTION_DATA[this.id] && window.PULLUK_COLLECTION_DATA[this.id].length > 0);
 
     try {
       const driveFiles = await fetchDriveFiles(this.folderId, hasPrecompiled ? null : this.els.notice, this.id);
