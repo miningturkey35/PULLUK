@@ -73,6 +73,7 @@
         <a href="#plak">VINYL ODYSSEY</a>
         <a href="#banknot">CÜZDAN-I KADİM</a>
         <a href="#legoverse">LEGOVERSE</a>
+        <a href="#basilsanat">KAĞIT EVREN</a>
         <a href="#allother">DAHA NE VARSA</a>
         <a href="#koleksiyoncu">Hakkında</a>
       </nav>
@@ -275,8 +276,25 @@
         </div>
       </div>
 
-      <!-- Daha Ne Varsa -->
+      <!-- Basılı Eser Koleksiyonu -->
       <div class="collection-card reveal reveal-delay-5"
+           role="button" tabindex="0"
+           data-scroll-to="basilsanat"
+           aria-label="Basılı Eser Koleksiyonunu görüntüle"
+           style="cursor:pointer;">
+        <div class="card-stripe stripe-kraft"></div>
+        <div class="card-body">
+          <h3>Basılı Eser Koleksiyonu</h3>
+          <p>Kitaplar, çizgi romanlar, dergiler, gazeteler ve daha fazlası. Her biri özenle muhafaza edilmiş nadide basılı eserler.</p>
+          <div class="card-count">
+            <span class="count-num basilsanat-count-num">—</span>
+            <span class="count-label">Parça</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daha Ne Varsa -->
+      <div class="collection-card reveal reveal-delay-6"
            role="button" tabindex="0"
            data-scroll-to="allother"
            aria-label="Daha Ne Varsa Koleksiyonunu görüntüle"
@@ -627,6 +645,81 @@
 
     <!-- Pagination -->
     <div class="pagination-container" id="paginationContainer_legoverse"></div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     BASILSANAT — KAĞIT EVREN
+     ════════════════════════════════════════ -->
+<section class="section gallery-section" id="basilsanat" aria-labelledby="basilsanat-heading">
+  <div class="wrap">
+
+    <div class="section-head reveal">
+      <span class="eyebrow">Basılı Eser Koleksiyonu</span>
+      <h2 id="basilsanat-heading">KAĞIT EVREN</h2>
+      <p>Kitaplar, çizgi romanlar, dergiler, gazeteler ve daha fazlası. Her biri özenle muhafaza edilmiş nadide basılı eserler.</p>
+    </div>
+
+    <!-- API Notice Banner -->
+    <div class="api-notice" id="apiNotice_basilsanat" role="alert">
+      <span class="api-notice-icon" aria-hidden="true">💡</span>
+      <div class="api-notice-text">
+        <b>Demo Modu</b>
+        Şu an örnek veriler gösteriliyor. Gerçek Drive dosyalarını görmek için <code>app.js</code> dosyasındaki
+        <code>GOOGLE_API_KEY</code> alanına Google Cloud API Key'inizi ekleyin.
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="gallery-controls reveal">
+      <div class="search-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input
+          type="search"
+          class="search-box"
+          id="searchBox_basilsanat"
+          placeholder="Basılı eser ara… (tür, yazar, başlık, yıl)"
+          aria-label="Basılı eser koleksiyonunda ara"
+          autocomplete="off"
+        >
+      </div>
+      <div class="filter-row" id="filterRow_basilsanat" role="group" aria-label="Kategoriye göre filtrele">
+        <button class="filter-btn is-active" data-filter="all">Tümü</button>
+        <button class="filter-btn" data-filter="kitap">Kitap</button>
+        <button class="filter-btn" data-filter="çizgi roman">Çizgi Roman</button>
+        <button class="filter-btn" data-filter="dergi">Dergi</button>
+        <button class="filter-btn" data-filter="gazete">Gazete</button>
+        <button class="filter-btn" data-filter="katalog">Katalog</button>
+        <button class="filter-btn" data-filter="broşür">Broşür</button>
+        <button class="filter-btn" data-filter="efemera">Efemera</button>
+      </div>
+    </div>
+
+    <!-- Gallery meta -->
+    <div class="gallery-meta reveal" id="galleryMeta_basilsanat" aria-live="polite" aria-atomic="true">
+      Yükleniyor…
+    </div>
+
+    <!-- PDF Grid -->
+    <div class="pdf-grid" id="pdfGrid_basilsanat" aria-label="Basılı eser koleksiyonu">
+
+      <!-- Loading state -->
+      <div class="gallery-loading" id="galleryLoading_basilsanat" aria-label="Yükleniyor" role="status">
+        <div class="spinner" aria-hidden="true"></div>
+        <span class="loading-text">Koleksiyon yükleniyor…</span>
+      </div>
+
+      <!-- Empty state -->
+      <div class="gallery-empty" id="galleryEmpty_basilsanat" aria-label="Sonuç bulunamadı">
+        <div class="empty-icon" aria-hidden="true">🔍</div>
+        <div class="empty-text">Aramanızla eşleşen basılı eser bulunamadı</div>
+      </div>
+
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-container" id="paginationContainer_basilsanat"></div>
 
   </div>
 </section>

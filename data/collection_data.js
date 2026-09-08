@@ -1039,5 +1039,6 @@ window.PULLUK_COLLECTION_DATA = {
       "webViewLink": "https://drive.google.com/file/d/1G0OM4vHdOspTEz9xN3FssbVux0WtE5k7/view?usp=drivesdk",
       "modifiedTime": "2026-09-06T15:07:12.404Z"
     }
-  ]
+  ],
+  "basilsanat": []
 };

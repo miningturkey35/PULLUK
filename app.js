@@ -15,6 +15,7 @@ const CONFIG = {
     'banknot': '1ffJ9xKTsrKpaM3OcJ0fRU4ggcRRmKBdL', // Banknot Koleksiyonu
     'allother': '1mmPvVEreFr0cbXjX3Ds21FOsZI9cRaH0', // Daha Ne Varsa (ALLOTHER)
     'legoverse': '1cJpRJ_B7wbHOJ69oYzI6JYWQdbabkLx4', // LEGO Koleksiyonu
+    'basilsanat': '1whiqtq37efr6bpK4pJ3pPJJ_4Z01dD8W', // Basılı Eser Koleksiyonu — KAĞIT EVREN
     'preview': '1cyZ7qFqvoTA39E0jWSK2LuueK7l0Da-W' // Önizleme görselleri
   },
 
@@ -384,7 +385,8 @@ function generateMockFiles(type) {
     : type === 'diecast' ? ['Klasik', 'Spor', 'Off-Road', 'Kamyon']
       : type === 'allother' ? ['Antika', 'Madeni Para', 'Kartpostal', 'Kitap', 'Çeşitli']
         : type === 'plak' ? ['Rock', 'Pop', 'Jazz', 'Blues', 'Klasik', 'Türkçe', 'Elektronik', 'Hip Hop', 'Folk', 'Metal']
-          : ['33lük', '45lik', 'Yerli', 'Yabancı', 'Jazz', 'Rock'];
+          : type === 'basilsanat' ? ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera']
+            : ['33lük', '45lik', 'Yerli', 'Yabancı', 'Jazz', 'Rock'];
 
   const themes = ['Doğa', 'Mimari', 'Spor', 'Sanat', 'Ulaşım', 'Tarih', 'Flora', 'Fauna'];
   const diecastModels = [
@@ -465,6 +467,48 @@ function generateMockFiles(type) {
         _title: album,
         _subtitle: artist,
         _ozet: `${artist} — ${album} (${year}), ${label}, ${format}, ${genre}. ${['Mint', 'Near Mint', 'Very Good'][i % 3]} durumda.`,
+      });
+    } else if (type === 'basilsanat') {
+      const yazarlar = [
+        'Orhan Pamuk', 'Sabahattin Ali', 'Yahya Kemal', 'Nazım Hikmet', 'Ömer Seyfettin',
+        'Reşat Nuri', 'Halikarnas Balıkçısı', 'Yaşar Kemal', 'Aziz Nesin', 'Sait Faik',
+        'Stan Lee', 'Franz Kafka', 'George Orwell', 'Umberto Eco', 'J.R.R. Tolkien',
+        'Agatha Christie', 'Isaac Asimov', 'Arthur C. Clarke', 'Ray Bradbury', 'Frank Herbert'
+      ];
+      const basliklar = [
+        'Kürk Mantolu Madonna', 'Çalıkuşu', 'Yaban', 'Memleketimden İnsan Manzaraları',
+        'Saatleri Ayarlama Enstitüsü', 'İnce Memed', 'Tehlikeli Oyunlar', 'Kuyucaklı Yusuf',
+        'Spider-Man: First Appearance', 'Dava', '1984', 'Gösteri Sanatı',
+        'Yüzüklerin Efendisi', 'Cinayetler Sorgulanıyor', 'Bilim Kurgu Efsaneleri',
+        'Dune', 'Fahrenheit 451', '2001: Bir Uzay Destanı', 'Vakıf', 'Sonuc'
+      ];
+      const yayinevleri = [
+        'Yapı Kredi Yayınları', 'İletişim Yayınları', 'Can Yayınları', 'Remzi Kitabevi',
+        'Doğan Kitap', 'Everest Yayınları', 'April Yayıncılık', 'İthaki Yayınları',
+        'Penguin Books', 'Vintage Books', 'HarperCollins', 'Simon & Schuster'
+      ];
+      const dil = ['Türkçe', 'İngilizce', 'Almanca', 'Fransızca', 'İtalyanca'];
+      const mockKatalogNo = `KE${String(i).padStart(4, '0')}`;
+      const basimYili = 1940 + Math.floor(Math.random() * 84);
+      files.push({
+        id: `mock_${type}_${i}`,
+        name: `${cat} - ${basliklar[i % basliklar.length]} ${basimYili}.pdf`,
+        category: cat,
+        webViewLink: `https://drive.google.com/drive/folders/${CONFIG.FOLDERS[type] || ''}`,
+        isMock: true,
+        _code: mockKatalogNo,
+        _katalogNo: mockKatalogNo,
+        _year: String(basimYili),
+        _basimYili: String(basimYili),
+        _basimYeri: ['İstanbul', 'Ankara', 'İzmir', 'London', 'New York', 'Berlin', 'Paris'][i % 7],
+        _durum: ['Yeni', 'İyi', 'Çok İyi', 'Mükemmel', 'Az Kullanılmış'][i % 5],
+        _title: basliklar[i % basliklar.length],
+        _subtitle: yazarlar[i % yazarlar.length],
+        _ozet: `${yazarlar[i % yazarlar.length]} — ${basliklar[i % basliklar.length]} (${basimYili}), ${yayinevleri[i % yayinevleri.length]}, ${dil[i % dil.length]}, ${cat}.`,
+        _yazar: yazarlar[i % yazarlar.length],
+        _yayinevi: yayinevleri[i % yayinevleri.length],
+        _dil: dil[i % dil.length],
+        _tur: cat,
       });
     } else {
       const stampTypes = ['Posta Pulu', 'Damga Pulu', 'Anma Pulu', 'Vergi Pulu', 'Harç Pulu', 'Konulu Pulu', 'Hatıra Pulu', 'Tematik Pulu', 'Resim Pulu', 'Adi Pulu', 'Resmi Pulu', 'Yetki Pulu', 'Gümrük Pulu', 'Blok', 'Minyatür', 'Perforasyonlu', 'Perforasyonsuz', 'Çapa', 'Kepçe', 'Hava Postası', 'Posta Havalesi', 'Ekspres', 'Kargo Pulu', 'Derleme', 'Emisyon'];
@@ -2021,7 +2065,7 @@ class GalleryManager {
     this.allFiles = [];
     this.filteredFiles = [];
     this.currentPage = 1;
-    const pageSizes = { galeri: 6, diecast: 3, plak: 3, banknot: 6, legoverse: 6, allother: 6 };
+    const pageSizes = { galeri: 6, diecast: 3, plak: 3, banknot: 6, legoverse: 6, allother: 6, basilsanat: 6 };
     this.pageSize = pageSizes[this.id] || CONFIG.PAGE_SIZE;
     this.currentFilter = 'all';
     this.searchQuery = '';
@@ -2157,6 +2201,7 @@ class GalleryManager {
   checkAndExtractCategory(file, card) {
     const textToSearch = (file._title || '') + ' ' + (file._subtitle || '') + ' ' + file.name + ' ' + (file.description || '');
     const isDiecast = this.id === 'diecast';
+    const isBasilsanat = this.id === 'basilsanat';
 
     if (isDiecast) {
       // Try HTML table data first
@@ -2178,6 +2223,22 @@ class GalleryManager {
         if (card) card.dataset.category = file.category.toLowerCase();
         this.updateFilterButtonsDynamically();
       }
+    } else if (isBasilsanat) {
+      const BASILSANAT_CATEGORIES = ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera'];
+      if (file.category && BASILSANAT_CATEGORIES.includes(file.category)) {
+        if (card) card.dataset.category = file.category.toLowerCase();
+        this.updateFilterButtonsDynamically();
+      } else {
+        const text = textToSearch.toLowerCase();
+        for (const cat of BASILSANAT_CATEGORIES) {
+          if (text.includes(cat.toLowerCase())) {
+            file.category = cat;
+            if (card) card.dataset.category = file.category.toLowerCase();
+            this.updateFilterButtonsDynamically();
+            break;
+          }
+        }
+      }
     } else {
       // Extract country from text
       const country = extractCountryFromText(textToSearch);
@@ -2192,6 +2253,7 @@ class GalleryManager {
   extractCategories() {
     const catSet = new Set();
     const isDiecast = this.id === 'diecast';
+    const isBasilsanat = this.id === 'basilsanat';
 
     this.allFiles.forEach(file => {
       const textToSearch = (file._title || '') + ' ' + (file._subtitle || '') + ' ' + file.name + ' ' + (file.description || '');
@@ -2223,6 +2285,32 @@ class GalleryManager {
         } else if (file.category) {
           catSet.add(file.category);
         }
+      } else if (isBasilsanat) {
+        // Basılı Eser: Kitap, Çizgi Roman, Dergi, Gazete, Katalog, Broşür, Efemera
+        const BASILSANAT_CATEGORIES = ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera'];
+        if (file.category && BASILSANAT_CATEGORIES.includes(file.category)) {
+          catSet.add(file.category);
+        } else {
+          // Try to extract category from text
+          const text = textToSearch.toLowerCase();
+          for (const cat of BASILSANAT_CATEGORIES) {
+            if (text.includes(cat.toLowerCase())) {
+              file.category = cat;
+              catSet.add(cat);
+              break;
+            }
+          }
+          // Fallback: use predefined category from file or mock data
+          if (!file.category && file.isMock) {
+            const parts = file.name.split(' - ');
+            if (parts.length > 1) {
+              file.category = parts[0];
+              catSet.add(parts[0]);
+            }
+          } else if (file.category) {
+            catSet.add(file.category);
+          }
+        }
       } else {
         // Extract country from text
         const country = extractCountryFromText(textToSearch);
@@ -2243,9 +2331,16 @@ class GalleryManager {
 
     // Predefined country order for non-diecast galleries
     const countryOrder = STAMP_COUNTRIES.map(c => c.name);
+    const basilsanatOrder = ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera'];
 
     return Array.from(catSet).sort((a, b) => {
-      if (!isDiecast) {
+      if (isBasilsanat) {
+        const idxA = basilsanatOrder.indexOf(a);
+        const idxB = basilsanatOrder.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+      } else if (!isDiecast) {
         const idxA = countryOrder.indexOf(a);
         const idxB = countryOrder.indexOf(b);
         if (idxA !== -1 && idxB !== -1) return idxA - idxB;
@@ -2317,6 +2412,10 @@ class GalleryManager {
         (file._series || '').toLowerCase().includes(q) ||
         (file._material || '').toLowerCase().includes(q) ||
         (file._model || '').toLowerCase().includes(q) ||
+        (file._yazar || '').toLowerCase().includes(q) ||
+        (file._yayinevi || '').toLowerCase().includes(q) ||
+        (file._dil || '').toLowerCase().includes(q) ||
+        (file._tur || '').toLowerCase().includes(q) ||
         file.name.toLowerCase().includes(q);
       const catMatch = cat === 'all' || (file.category || '').toLocaleLowerCase('tr') === cat;
       return nameMatch && catMatch;
@@ -2347,14 +2446,15 @@ class GalleryManager {
 
     // Dynamic labels based on gallery type
     const isKarma = (galleryId === 'allother');
+    const isBasilsanat = (galleryId === 'basilsanat');
     const L = {
-      ulke: isKarma ? 'Üretim Yeri' : 'Ülke',
-      yil: isKarma ? 'Üretim Yılı' : 'Basım Yılı',
-      nominal: isKarma ? 'Parça Tanımı' : 'Nominal Değer',
-      tipi: isKarma ? 'Açıklama' : 'Pul Tipi',
+      ulke: isBasilsanat ? 'Yazar' : isKarma ? 'Üretim Yeri' : 'Ülke',
+      yil: isBasilsanat ? 'Basım Yılı' : isKarma ? 'Üretim Yılı' : 'Basım Yılı',
+      nominal: isBasilsanat ? 'Yayınevi' : isKarma ? 'Parça Tanımı' : 'Nominal Değer',
+      tipi: isBasilsanat ? 'Tür' : isKarma ? 'Açıklama' : 'Pul Tipi',
     };
-    const nominalValue = isKarma ? initialTitle : (file._nominal || file._nominalDeger || '');
-    const tipiValue = isKarma ? initialSub : (file._type || file._pulTipi || '');
+    const nominalValue = isBasilsanat ? (file._yayinevi || initialTitle) : isKarma ? initialTitle : (file._nominal || file._nominalDeger || '');
+    const tipiValue = isBasilsanat ? (file._tur || initialSub) : isKarma ? initialSub : (file._type || file._pulTipi || '');
 
     const card = document.createElement('div');
     card.className = 'pdf-card reveal';
@@ -3368,6 +3468,7 @@ async function init() {
     new GalleryManager('plak', CONFIG.FOLDERS['plak']),
     new GalleryManager('banknot', CONFIG.FOLDERS['banknot']),
     new GalleryManager('legoverse', CONFIG.FOLDERS['legoverse']),
+    new GalleryManager('basilsanat', CONFIG.FOLDERS['basilsanat']),
     new GalleryManager('allother', CONFIG.FOLDERS['allother'])
   ];
 
