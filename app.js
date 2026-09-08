@@ -1139,6 +1139,159 @@ function extractStampInfoFromHtml(html) {
     nominalDeger, pulTipi, ozet, durum
   };
 }
+// ─── BASILSANAT (PRINTED WORKS) EXTRACTOR ────────────────────────────────────
+function extractBasilsanatInfoFromHtml(html) {
+  const EMPTY = { title: '', subtitle: '', image: '', code: '', yazar: '', yayinevi: '', dil: '', tur: '', year: '', basimYili: '', basimYeri: '', durum: '', ozet: '' };
+  if (!html) return EMPTY;
+
+  const cleanHtml = html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '');
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(cleanHtml, 'text/html');
+
+  let title = '', subtitle = '', image = '', code = '';
+  let yazar = '', yayinevi = '', dil = '', tur = '', year = '', basimYili = '', basimYeri = '', durum = '', ozet = '';
+
+  const bodyText = doc.body ? doc.body.textContent || '' : '';
+  const allText = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+  const scanText = (bodyText + ' ' + allText).toLowerCase();
+
+  // ── TABLE KEY-VALUE EXTRACTION ──
+  const tableData = {};
+  const rows = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi);
+  if (rows) {
+    for (const row of rows) {
+      const thMatches = row.match(/<th[^>]*>([\s\S]*?)<\/th>/gi);
+      const tdMatches = row.match(/<td[^>]*>([\s\S]*?)<\/td>/gi);
+      let key = '', val = '';
+      if (thMatches && tdMatches && tdMatches.length >= 1) {
+        key = thMatches[0].replace(/<[^>]+>/g, '').trim();
+        val = tdMatches[0].replace(/<[^>]+>/g, '').trim();
+      } else if (tdMatches && tdMatches.length >= 2) {
+        key = tdMatches[0].replace(/<[^>]+>/g, '').trim();
+        val = tdMatches[1].replace(/<[^>]+>/g, '').trim();
+      }
+      if (key && val) tableData[key.toLowerCase().trim()] = val;
+    }
+  }
+  const cells = doc.querySelectorAll('td, th');
+  for (let i = 0; i < cells.length; i++) {
+    const t = cells[i].textContent.trim();
+    const nextTd = cells[i].nextElementSibling;
+    if (nextTd && t.length < 60) {
+      tableData[t.toLowerCase().trim()] = nextTd.textContent.trim();
+    }
+  }
+
+  const findTableValue = (...keys) => {
+    for (const k of keys) {
+      const low = k.toLowerCase();
+      for (const tk of Object.keys(tableData)) {
+        if (tk.includes(low) || low.includes(tk)) return tableData[tk];
+      }
+    }
+    return '';
+  };
+
+  // ── CODE ──
+  const kodEl = doc.querySelector('.kod');
+  if (kodEl) {
+    code = kodEl.textContent.trim();
+  } else {
+    const codeEl2 = doc.querySelector('.collection-number');
+    if (codeEl2) {
+      code = codeEl2.textContent.trim();
+    } else {
+      const titleTag = doc.querySelector('title');
+      if (titleTag) {
+        const rawTitle = titleTag.textContent.trim();
+        const codeMatch = rawTitle.match(/\b(KE\w*\d+)\b/i) || rawTitle.match(/\b(M[GCKR]\w*\d+)\b/i);
+        if (codeMatch) code = codeMatch[1].trim();
+      }
+    }
+  }
+
+  // ── TITLE ──
+  const h1El = doc.querySelector('h1');
+  if (h1El) title = h1El.textContent.trim();
+  if (!title) {
+    for (const sel of ['.title', '.name', 'h2', 'h3', '.stamp-title', '[itemprop="name"]']) {
+      const el = doc.querySelector(sel);
+      if (el) {
+        const text = el.textContent.trim();
+        if (text && text.length > 1 && text.length < 200) { title = text; break; }
+      }
+    }
+  }
+  if (!title) {
+    const titleTag = doc.querySelector('title');
+    if (titleTag) {
+      const rawTitle = titleTag.textContent.trim();
+      const parts = rawTitle.split(/[·•|—–]/);
+      if (parts.length >= 2) {
+        title = parts.find(p => p.trim() && !/^KE\d+$/i.test(p.trim()) && !/^MG[A-Z]?\d+$/i.test(p.trim()) && !/GÜVENTÜRK|KOLEKSİYON/i.test(p.trim())) || '';
+        title = title.trim();
+      } else if (rawTitle && !/GÜVENTÜRK|KOLEKSİYON/i.test(rawTitle)) {
+        title = rawTitle;
+      }
+    }
+  }
+
+  // ── SUBTITLE ──
+  const subEl = doc.querySelector('.subtitle, .sub, .description, .detail, .info');
+  if (subEl) subtitle = subEl.textContent.trim();
+
+  // ── IMAGE ──
+  const imgEl = doc.querySelector('img');
+  if (imgEl) image = imgEl.getAttribute('src') || '';
+
+  // ── YAZAR (Author) ──
+  yazar = findTableValue('yazar', 'author', 'yazan', 'müellif', 'kaleme alan', 'editör');
+
+  // ── YAYINEVI (Publisher) ──
+  yayinevi = findTableValue('yayınevi', 'yayinevi', 'yayın evi', 'publisher', 'yayın', 'neşriyat');
+
+  // ── DIL (Language) ──
+  dil = findTableValue('dil', 'language', 'lisân', 'lisan');
+
+  // ── TÜR (Genre/Type) ──
+  tur = findTableValue('tür', 'tur', 'type', 'türü', 'kategori', 'category', 'tür / kategori');
+
+  // ── BASIM YILI (Year) ──
+  year = findTableValue('basım yılı', 'yıl', 'year', 'yayın yılı', 'basim yili', 'tarih', 'basım tarihi', 'basım yılı / dönemi', 'basim yili / donemi');
+  if (!year) {
+    const yearMatch = scanText.match(/\b((?:18|19|20)\d{2})\b/);
+    if (yearMatch) year = yearMatch[1];
+  }
+  basimYili = year;
+
+  // ── BASIM YERI ──
+  basimYeri = findTableValue('basım yeri', 'basim yeri', 'yayın yeri', 'yayınevi yeri', 'yer', 'place');
+
+  // ── DURUM (Condition) ──
+  durum = findTableValue('durum', 'condition', 'state', 'kalite', 'kondisyon');
+
+  // ── OZET (Summary) ──
+  const metaDesc = doc.querySelector('meta[name="description"]');
+  if (metaDesc) ozet = metaDesc.getAttribute('content') || '';
+  if (!ozet) {
+    const summaryEl = doc.querySelector('.summary, .overview, .description, .history, .ozet');
+    if (summaryEl) ozet = summaryEl.textContent.trim();
+  }
+  if (!ozet) {
+    const firstP = doc.querySelector('p');
+    if (firstP) {
+      const pText = firstP.textContent.trim();
+      if (pText.length > 20) ozet = pText.substring(0, 300);
+    }
+  }
+
+  return {
+    title, subtitle, image, code, yazar, yayinevi, dil, tur, year, basimYili, basimYeri, durum, ozet
+  };
+}
 // ─── PLAK (VINYL) EXTRACTOR ────────────────────────────────────────────────
 function extractPlakInfoFromHtml(html) {
   const EMPTY = { title: '', subtitle: '', image: '', code: '', artist: '', album: '', plakSirketi: '', katalogNo: '', year: '', format: '', country: '', genre: '', pressing: '', matrixNo: '', condition: '' };
@@ -1535,6 +1688,10 @@ async function getFileFromCache(file) {
       file._material = cached._material;
       file._modelYear = cached._modelYear;
       file._productionYear = cached._productionYear;
+      file._yazar = cached._yazar;
+      file._yayinevi = cached._yayinevi;
+      file._dil = cached._dil;
+      file._tur = cached._tur;
       return true;
     }
   } catch (e) {
@@ -1583,7 +1740,11 @@ async function saveFileToCache(file) {
       _series: file._series,
       _material: file._material,
       _modelYear: file._modelYear,
-      _productionYear: file._productionYear
+      _productionYear: file._productionYear,
+      _yazar: file._yazar,
+      _yayinevi: file._yayinevi,
+      _dil: file._dil,
+      _tur: file._tur
     };
     store.put(data);
   } catch (e) {
@@ -1681,6 +1842,20 @@ async function processPreviewQueue() {
           file._rarePieces = legoData.rarePieces;
           if (legoData.setName) file._title = legoData.setName;
           if (legoData.theme) file._subtitle = legoData.subTheme ? `${legoData.theme} — ${legoData.subTheme}` : legoData.theme;
+          saveFileToCache(file);
+        }
+        // Basilsanat-specific: extract from html if not yet done
+        if (gallery && gallery.id === 'basilsanat' && !file._yazar && file._htmlContent) {
+          const basData = extractBasilsanatInfoFromHtml(file._htmlContent);
+          file._yazar = basData.yazar;
+          file._yayinevi = basData.yayinevi;
+          file._dil = basData.dil;
+          file._tur = basData.tur;
+          file._durum = basData.durum || file._durum;
+          file._basimYeri = basData.basimYeri || file._basimYeri;
+          if (basData.title && !file._title) file._title = basData.title;
+          if (basData.subtitle && !file._subtitle) file._subtitle = basData.subtitle;
+          if (basData.ozet && !file._ozet) file._ozet = basData.ozet;
           saveFileToCache(file);
         }
         updateCardUI(item);
@@ -1860,6 +2035,20 @@ async function processPreviewQueue() {
           if (legoData.theme) file._subtitle = legoData.subTheme ? `${legoData.theme} — ${legoData.subTheme}` : legoData.theme;
         }
 
+        // Basilsanat-specific extraction
+        if (gallery && gallery.id === 'basilsanat') {
+          const basData = extractBasilsanatInfoFromHtml(html);
+          file._yazar = basData.yazar;
+          file._yayinevi = basData.yayinevi;
+          file._dil = basData.dil;
+          file._tur = basData.tur;
+          file._durum = basData.durum || file._durum;
+          file._basimYeri = basData.basimYeri || file._basimYeri;
+          if (basData.title && !file._title) file._title = basData.title;
+          if (basData.subtitle && !file._subtitle) file._subtitle = basData.subtitle;
+          if (basData.ozet && !file._ozet) file._ozet = basData.ozet;
+        }
+
         saveFileToCache(file);
         updateCardUI(item);
         if (gallery) gallery.checkAndExtractCategory(file, card);
@@ -1915,10 +2104,11 @@ function updateCardUI(item) {
 
     // Dynamic values based on gallery type
     const isKarma = (galleryId === 'allother');
-    const nominalValue = isKarma ? titleText : (file._nominal || file._nominalDeger || '');
-    const tipiValue = isKarma ? subtitleText : (file._type || file._pulTipi || '');
+    const isBasilsanat = (galleryId === 'basilsanat');
+    const nominalValue = isBasilsanat ? (file._yayinevi || '') : isKarma ? titleText : (file._nominal || file._nominalDeger || '');
+    const tipiValue = isBasilsanat ? (file._tur || '') : isKarma ? subtitleText : (file._type || file._pulTipi || '');
 
-    const abbrevCountry = normalizeCountryName(country);
+    const abbrevCountry = isBasilsanat ? (file._yazar || '') : normalizeCountryName(country);
 
     // Populate 5-field card elements
     if (koleksiyonEl) {
