@@ -16,6 +16,7 @@ const CONFIG = {
     'allother': '1mmPvVEreFr0cbXjX3Ds21FOsZI9cRaH0', // Daha Ne Varsa (ALLOTHER)
     'legoverse': '1cJpRJ_B7wbHOJ69oYzI6JYWQdbabkLx4', // LEGO Koleksiyonu
     'basilsanat': '1whiqtq37efr6bpK4pJ3pPJJ_4Z01dD8W', // Basılı Eser Koleksiyonu — KAĞIT EVREN
+    'iskambil': '1ZNjWCmwVBgkCSbDkRKf-WkOZ4y3SDRQr', // İskambil Kağıdı Koleksiyonu — ACES HIGH
     'preview': '1cyZ7qFqvoTA39E0jWSK2LuueK7l0Da-W' // Önizleme görselleri
   },
 
@@ -386,7 +387,8 @@ function generateMockFiles(type) {
       : type === 'allother' ? ['Antika', 'Madeni Para', 'Kartpostal', 'Kitap', 'Çeşitli']
         : type === 'plak' ? ['Rock', 'Pop', 'Jazz', 'Blues', 'Klasik', 'Türkçe', 'Elektronik', 'Hip Hop', 'Folk', 'Metal']
           : type === 'basilsanat' ? ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera']
-            : ['33lük', '45lik', 'Yerli', 'Yabancı', 'Jazz', 'Rock'];
+            : type === 'iskambil' ? ['Poker', 'Bridge', 'Skat', 'Tarot', 'Piatnik', 'Bicycle', 'Fournier', 'Kemper & Troyer']
+              : ['33lük', '45lik', 'Yerli', 'Yabancı', 'Jazz', 'Rock'];
 
   const themes = ['Doğa', 'Mimari', 'Spor', 'Sanat', 'Ulaşım', 'Tarih', 'Flora', 'Fauna'];
   const diecastModels = [
@@ -508,6 +510,30 @@ function generateMockFiles(type) {
         _yazar: yazarlar[i % yazarlar.length],
         _yayinevi: yayinevleri[i % yayinevleri.length],
         _dil: dil[i % dil.length],
+        _tur: cat,
+      });
+    } else if (type === 'iskambil') {
+      const markalar = ['Piatnik', 'Bicycle', 'Fournier', 'Kemper & Troyer', 'Cartamundi', 'USPCC', 'Grimaud', 'Heraclio Fournier'];
+      const modeller = ['Standard', 'Beehive', 'Aviator', 'Rider Back', 'Congress', 'Noir', 'Cartes Rouges', 'Bee', 'Hoyle', 'Kemper'];
+      const types = ['Poker', 'Bridge', 'Skat', 'Tarot', 'Cigar', 'Gaff'];
+      const colors = ['Kırmızı', 'Siyah', 'Mavi', 'Yeşil', 'Karışık'];
+      const mockKatalogNo = `AC${String(i).padStart(4, '0')}`;
+      files.push({
+        id: `mock_${type}_${i}`,
+        name: `${cat} - ${markalar[i % markalar.length]} ${modeller[i % modeller.length]} ${year}.pdf`,
+        category: cat,
+        webViewLink: `https://drive.google.com/drive/folders/${CONFIG.FOLDERS[type] || ''}`,
+        isMock: true,
+        _code: mockKatalogNo,
+        _katalogNo: mockKatalogNo,
+        _year: String(year),
+        _basimYili: String(year),
+        _durum: ['Mükemmel', 'Çok İyi', 'İyi', 'Az Kullanılmış', 'Yeni'][i % 5],
+        _title: `${modeller[i % modeller.length]} ${types[i % types.length]}`,
+        _subtitle: markalar[i % markalar.length],
+        _ozet: `${markalar[i % markalar.length]} ${modeller[i % modeller.length]} ${types[i % types.length]} iskambil kağıdı. ${colors[i % colors.length]} renk, ${year} basımı.`,
+        _marka: markalar[i % markalar.length],
+        _model: modeller[i % modeller.length],
         _tur: cat,
       });
     } else {
@@ -1768,6 +1794,8 @@ async function getFileFromCache(file) {
       file._yayinevi = cached._yayinevi;
       file._dil = cached._dil;
       file._tur = cached._tur;
+      file._marka = cached._marka;
+      file._model = cached._model;
       return true;
     }
   } catch (e) {
@@ -1820,7 +1848,9 @@ async function saveFileToCache(file) {
       _yazar: file._yazar,
       _yayinevi: file._yayinevi,
       _dil: file._dil,
-      _tur: file._tur
+      _tur: file._tur,
+      _marka: file._marka,
+      _model: file._model
     };
     store.put(data);
   } catch (e) {
@@ -2198,10 +2228,11 @@ function updateCardUI(item) {
     // Dynamic values based on gallery type
     const isKarma = (galleryId === 'allother');
     const isBasilsanat = (galleryId === 'basilsanat');
-    const nominalValue = isBasilsanat ? (file._yayinevi || '') : isKarma ? titleText : (file._nominal || file._nominalDeger || '');
+    const isIskambil = (galleryId === 'iskambil');
+    const nominalValue = isIskambil ? (file._model || '') : isBasilsanat ? (file._yayinevi || '') : isKarma ? titleText : (file._nominal || file._nominalDeger || '');
     const tipiValue = isBasilsanat ? (file._tur || '') : isKarma ? subtitleText : (file._type || file._pulTipi || '');
 
-    const abbrevCountry = isBasilsanat ? (file._yazar || '') : normalizeCountryName(country);
+    const abbrevCountry = isIskambil ? (file._marka || '') : isBasilsanat ? (file._yazar || '') : normalizeCountryName(country);
 
     // Populate 5-field card elements
     if (koleksiyonEl) {
@@ -2348,7 +2379,7 @@ class GalleryManager {
     this.allFiles = [];
     this.filteredFiles = [];
     this.currentPage = 1;
-    const pageSizes = { galeri: 6, diecast: 3, plak: 3, banknot: 6, legoverse: 6, allother: 6, basilsanat: 6 };
+    const pageSizes = { galeri: 6, diecast: 3, plak: 3, banknot: 6, legoverse: 6, allother: 6, basilsanat: 6, iskambil: 6 };
     this.pageSize = pageSizes[this.id] || CONFIG.PAGE_SIZE;
     this.currentFilter = 'all';
     this.searchQuery = '';
@@ -2594,6 +2625,21 @@ class GalleryManager {
             catSet.add(file.category);
           }
         }
+      } else if (this.id === 'iskambil') {
+        // İskambil: MARKA bazlı filtre
+        if (file._marka) {
+          file.category = file._marka;
+          catSet.add(file._marka);
+        } else if (file.category) {
+          catSet.add(file.category);
+        } else if (file.isMock) {
+          const parts = file.name.split(' - ');
+          if (parts.length > 1) {
+            const marka = parts[1].split(' ')[0];
+            file.category = marka;
+            catSet.add(marka);
+          }
+        }
       } else {
         // Extract country from text
         const country = extractCountryFromText(textToSearch);
@@ -2699,6 +2745,8 @@ class GalleryManager {
         (file._yayinevi || '').toLowerCase().includes(q) ||
         (file._dil || '').toLowerCase().includes(q) ||
         (file._tur || '').toLowerCase().includes(q) ||
+        (file._marka || '').toLowerCase().includes(q) ||
+        (file._model || '').toLowerCase().includes(q) ||
         file.name.toLowerCase().includes(q);
       const catMatch = cat === 'all' || (file.category || '').toLocaleLowerCase('tr') === cat;
       return nameMatch && catMatch;
@@ -2730,13 +2778,14 @@ class GalleryManager {
     // Dynamic labels based on gallery type
     const isKarma = (galleryId === 'allother');
     const isBasilsanat = (galleryId === 'basilsanat');
+    const isIskambil = (galleryId === 'iskambil');
     const L = {
-      ulke: isBasilsanat ? 'Yazar' : isKarma ? 'Üretim Yeri' : 'Ülke',
+      ulke: isIskambil ? 'Marka' : isBasilsanat ? 'Yazar' : isKarma ? 'Üretim Yeri' : 'Ülke',
       yil: isBasilsanat ? 'Basım Yılı' : isKarma ? 'Üretim Yılı' : 'Basım Yılı',
-      nominal: isBasilsanat ? 'Yayınevi' : isKarma ? 'Parça Tanımı' : 'Nominal Değer',
+      nominal: isIskambil ? 'Model' : isBasilsanat ? 'Yayınevi' : isKarma ? 'Parça Tanımı' : 'Nominal Değer',
       tipi: isBasilsanat ? 'Tür' : isKarma ? 'Açıklama' : 'Pul Tipi',
     };
-    const nominalValue = isBasilsanat ? (file._yayinevi || initialTitle) : isKarma ? initialTitle : (file._nominal || file._nominalDeger || '');
+    const nominalValue = isIskambil ? (file._model || initialTitle) : isBasilsanat ? (file._yayinevi || initialTitle) : isKarma ? initialTitle : (file._nominal || file._nominalDeger || '');
     const tipiValue = isBasilsanat ? (file._tur || initialSub) : isKarma ? initialSub : (file._type || file._pulTipi || '');
 
     const card = document.createElement('div');
@@ -3752,6 +3801,7 @@ async function init() {
     new GalleryManager('banknot', CONFIG.FOLDERS['banknot']),
     new GalleryManager('legoverse', CONFIG.FOLDERS['legoverse']),
     new GalleryManager('basilsanat', CONFIG.FOLDERS['basilsanat']),
+    new GalleryManager('iskambil', CONFIG.FOLDERS['iskambil']),
     new GalleryManager('allother', CONFIG.FOLDERS['allother'])
   ];
 

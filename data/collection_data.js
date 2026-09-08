@@ -1040,5 +1040,6 @@ window.PULLUK_COLLECTION_DATA = {
       "modifiedTime": "2026-09-06T15:07:12.404Z"
     }
   ],
-  "basilsanat": []
+  "basilsanat": [],
+  "iskambil": []
 };

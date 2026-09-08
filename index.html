@@ -73,6 +73,7 @@
         <a href="#plak">VINYL ODYSSEY</a>
         <a href="#banknot">CÜZDAN-I KADİM</a>
         <a href="#legoverse">LEGOVERSE</a>
+        <a href="#iskambil">ACES HIGH</a>
         <a href="#basilsanat">KAĞIT EVREN</a>
         <a href="#allother">DAHA NE VARSA</a>
         <a href="#koleksiyoncu">Hakkında</a>
@@ -271,6 +272,23 @@
           <p>LEGO setlerinden oluşan özel koleksiyon. Star Wars, Creator, Architecture ve daha fazlası.</p>
           <div class="card-count">
             <span class="count-num legoverse-count-num">—</span>
+            <span class="count-label">Set</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- İskambil Kağıdı Koleksiyonu -->
+      <div class="collection-card reveal reveal-delay-5"
+           role="button" tabindex="0"
+           data-scroll-to="iskambil"
+           aria-label="İskambil Kağıdı Koleksiyonunu görüntüle"
+           style="cursor:pointer;">
+        <div class="card-stripe stripe-crimson"></div>
+        <div class="card-body">
+          <h3>İskambil Kağıdı Koleksiyonu</h3>
+          <p>Nadir ve koleksiyonluk iskambil kağıtları. Her biri özenle muhafaza edilmiş nadide parçalar.</p>
+          <div class="card-count">
+            <span class="count-num iskambil-count-num">—</span>
             <span class="count-label">Set</span>
           </div>
         </div>
@@ -645,6 +663,74 @@
 
     <!-- Pagination -->
     <div class="pagination-container" id="paginationContainer_legoverse"></div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════
+     İSKAMBIL — ACES HIGH
+     ════════════════════════════════════════ -->
+<section class="section gallery-section" id="iskambil" aria-labelledby="iskambil-heading">
+  <div class="wrap">
+
+    <div class="section-head reveal">
+      <span class="eyebrow">İskambil Kağıdı Koleksiyonu</span>
+      <h2 id="iskambil-heading">ACES HIGH</h2>
+      <p>Nadir ve koleksiyonluk iskambil kağıtları. Her biri özenle muhafaza edilmiş nadide parçalar.</p>
+    </div>
+
+    <!-- API Notice Banner -->
+    <div class="api-notice" id="apiNotice_iskambil" role="alert">
+      <span class="api-notice-icon" aria-hidden="true">💡</span>
+      <div class="api-notice-text">
+        <b>Demo Modu</b>
+        Şu an örnek veriler gösteriliyor. Gerçek Drive dosyalarını görmek için <code>app.js</code> dosyasındaki
+        <code>GOOGLE_API_KEY</code> alanına Google Cloud API Key'inizi ekleyin.
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="gallery-controls reveal">
+      <div class="search-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input
+          type="search"
+          class="search-box"
+          id="searchBox_iskambil"
+          placeholder="İskambil kağıdı ara… (marka, tür, yıl)"
+          aria-label="İskambil kağıdı koleksiyonunda ara"
+          autocomplete="off"
+        >
+      </div>
+      <div class="filter-row" id="filterRow_iskambil" role="group" aria-label="Kategoriye göre filtrele">
+        <button class="filter-btn is-active" data-filter="all">Tümü</button>
+      </div>
+    </div>
+
+    <!-- Gallery meta -->
+    <div class="gallery-meta reveal" id="galleryMeta_iskambil" aria-live="polite" aria-atomic="true">
+      Yükleniyor…
+    </div>
+
+    <!-- PDF Grid -->
+    <div class="pdf-grid" id="pdfGrid_iskambil" aria-label="İskambil kağıdı koleksiyonu">
+
+      <!-- Loading state -->
+      <div class="gallery-loading" id="galleryLoading_iskambil" aria-label="Yükleniyor" role="status">
+        <div class="spinner" aria-hidden="true"></div>
+        <span class="loading-text">Koleksiyon yükleniyor…</span>
+      </div>
+
+      <!-- Empty state -->
+      <div class="gallery-empty" id="galleryEmpty_iskambil" aria-label="Sonuç bulunamadı">
+        <div class="empty-icon" aria-hidden="true">🔍</div>
+        <div class="empty-text">Aramanızla eşleşen iskambil kağıdı bulunamadı</div>
+      </div>
+
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-container" id="paginationContainer_iskambil"></div>
 
   </div>
 </section>
