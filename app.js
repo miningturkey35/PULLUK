@@ -658,6 +658,7 @@ function extractStampInfoFromHtml(html) {
   let year = '';
   let nominalDeger = '';
   let pulTipi = '';
+  let basimYili = '';
   let basimYeri = '';
   let ozet = '';
   let durum = '';
@@ -877,6 +878,13 @@ function extractStampInfoFromHtml(html) {
     const yearMatch = scanText.match(/\b((?:18|19|20)\d{2})\b/);
     if (yearMatch) year = yearMatch[1];
   }
+
+  // ── 7b. BASIM YILI: extract from table data ──
+  if (!basimYili) {
+    const tableBasimYili = findTableValue('basım yılı', 'basim yili', 'basım yili');
+    if (tableBasimYili) basimYili = tableBasimYili;
+  }
+  if (!basimYili && year) basimYili = year;
 
   // ── 8. PUL TİPİ: extract from text ──
   // First, check for "****" pattern which indicates Damga Pulu
