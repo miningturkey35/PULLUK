@@ -1964,6 +1964,7 @@ async function processPreviewQueue() {
       console.log(`[PULLUK] processPreviewQueue: processing ${file.name} — _title=${file._title}, _image=${file._image ? 'yes' : 'no'}, _code=${file._code}, _country=${file._country}`);
 
       if (file._title) {
+        console.log(`[PULLUK] processPreviewQueue: ${file.name} HAS _title, using cached data`);
         // Re-extract and normalize missing/outdated fields from cached htmlContent
         if (file._htmlContent) {
           const reExtracted = extractStampInfoFromHtml(file._htmlContent);
@@ -2080,6 +2081,7 @@ async function processPreviewQueue() {
       }
 
       if (!file._title && await getFileFromCache(file)) {
+        console.log(`[PULLUK] processPreviewQueue: ${file.name} found in cache, _htmlContent=${file._htmlContent ? 'yes (' + file._htmlContent.length + ' chars)' : 'NO'}`);
         // Re-extract and normalize fields from cached htmlContent
         if (file._htmlContent) {
           const reExtracted = extractStampInfoFromHtml(file._htmlContent);
@@ -2198,6 +2200,7 @@ async function processPreviewQueue() {
         return;
       }
 
+      console.log(`[PULLUK] processPreviewQueue: ${file.name} not in cache, fetching from API`);
       try {
         const pc = new AbortController();
         const pt = setTimeout(() => pc.abort(), 20000);
@@ -2211,6 +2214,7 @@ async function processPreviewQueue() {
         } finally {
           clearTimeout(pt);
         }
+        console.log(`[PULLUK] processPreviewQueue: ${file.name} fetch status=${res.status}`);
         if (res.status === 429) {
           if ((item._retryCount || 0) < PREVIEW_MAX_RETRIES) {
             item._retryCount = (item._retryCount || 0) + 1;
