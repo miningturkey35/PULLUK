@@ -2082,6 +2082,7 @@ async function processPreviewQueue() {
 
       if (!file._title && await getFileFromCache(file)) {
         console.log(`[PULLUK] processPreviewQueue: ${file.name} found in cache, _htmlContent=${file._htmlContent ? 'yes (' + file._htmlContent.length + ' chars)' : 'NO'}`);
+        try {
         // Re-extract and normalize fields from cached htmlContent
         if (file._htmlContent) {
           const reExtracted = extractStampInfoFromHtml(file._htmlContent);
@@ -2102,6 +2103,11 @@ async function processPreviewQueue() {
           if (!file._basimYili && reExtracted.basimYili) { file._basimYili = reExtracted.basimYili; changed = true; }
           if (!file._subtitle && reExtracted.subtitle) { file._subtitle = reExtracted.subtitle; changed = true; }
           if (changed) saveFileToCache(file);
+        }
+        // Also re-extract _title if still missing
+        if (!file._title && file._htmlContent) {
+          const t = extractStampInfoFromHtml(file._htmlContent);
+          if (t.title) file._title = t.title;
         }
         // Plak-specific: extract from cached html if not yet done
         if (gallery && gallery.id === 'plak' && !file._artist && file._htmlContent) {
@@ -2194,6 +2200,9 @@ async function processPreviewQueue() {
           if (iskData.ozet && !file._ozet) file._ozet = iskData.ozet;
           if (iskData.image && !file._image) file._image = iskData.image;
           saveFileToCache(file);
+        }
+        } catch (cacheErr) {
+          console.warn(`[PULLUK] processPreviewQueue: cache re-extraction error for ${file.name}:`, cacheErr);
         }
         updateCardUI(item);
         if (gallery) gallery.checkAndExtractCategory(file, card);
