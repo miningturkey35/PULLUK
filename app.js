@@ -706,7 +706,7 @@ function extractStampInfoFromHtml(html) {
     return '';
   };
 
-  // ── 1. KODEX (.kod element, then .collection-number, then <title>) ──
+  // ── 1. KODEX (.kod element, then .collection-number, then .coll-num, then <title>) ──
   const kodEl = doc.querySelector('.kod');
   if (kodEl) {
     code = kodEl.textContent.trim();
@@ -715,11 +715,16 @@ function extractStampInfoFromHtml(html) {
     if (codeEl2) {
       code = codeEl2.textContent.trim();
     } else {
-      const titleTag = doc.querySelector('title');
-      if (titleTag) {
-        const rawTitle = titleTag.textContent.trim();
-        const codeMatch = rawTitle.match(/\b(M[GCKR]\w*\d+)\b/i);
-        if (codeMatch) code = codeMatch[1].trim();
+      const codeEl3 = doc.querySelector('.coll-num');
+      if (codeEl3) {
+        code = codeEl3.textContent.trim();
+      } else {
+        const titleTag = doc.querySelector('title');
+        if (titleTag) {
+          const rawTitle = titleTag.textContent.trim();
+          const codeMatch = rawTitle.match(/\b(M[GCKR]\w*\d+)\b/i);
+          if (codeMatch) code = codeMatch[1].trim();
+        }
       }
     }
   }
@@ -3635,9 +3640,20 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
       frame.src = `/drive-proxy?fileId=${fileId}`;
       loaded = true;
     } else {
-      frame.src = `files/${fileId}.html`;
+      // On HTTPS (GitHub Pages), try alt=media as iframe src
+      const altMediaUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${CONFIG.GOOGLE_API_KEY.trim()}`;
+      frame.src = altMediaUrl;
       loaded = true;
     }
+  }
+
+  // If still not loaded, show error with Drive link
+  if (!loaded) {
+    currentFileHtml = null;
+    loading.classList.add('is-hidden');
+    frame.srcdoc = `<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#aaa;flex-direction:column;gap:12px;background:#0B132B}</style>
+      <p>&#9888; Dosya içeriği yüklenemedi. Ağ hatası veya kota aşımı olabilir.</p>
+      <a href="${viewUrl}" target="_blank" style="color:#4FC3F7">Google Drive'da Aç</a>`;
   }
 
   if (!loaded && fileId && !isHtml) {
