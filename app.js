@@ -1325,8 +1325,12 @@ function extractIskambilInfoFromHtml(html) {
   const EMPTY = { title: '', subtitle: '', image: '', code: '', marka: '', deste: '', basimYili: '', ulke: '', durum: '', kartSayisi: '', boyut: '', indeks: '', ozet: '' };
   if (!html) return EMPTY;
 
+  const cleanHtml = html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '');
+
   const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
+  const doc = parser.parseFromString(cleanHtml, 'text/html');
 
   let title = '', subtitle = '', image = '', code = '';
   let marka = '', deste = '', basimYili = '', ulke = '', durum = '', kartSayisi = '', boyut = '', indeks = '', ozet = '';
@@ -1338,6 +1342,10 @@ function extractIskambilInfoFromHtml(html) {
   // ── TITLE ──
   const h1 = doc.querySelector('h1');
   if (h1) title = h1.textContent.trim();
+  if (!title) {
+    const titleEl = doc.querySelector('title');
+    if (titleEl) title = titleEl.textContent.trim();
+  }
 
   // ── SUBTITLE ──
   const subEl = doc.querySelector('.subtitle');
@@ -1351,70 +1359,142 @@ function extractIskambilInfoFromHtml(html) {
     if (anyImg) image = anyImg.getAttribute('src') || '';
   }
 
-  // ── TABLE FIELDS: find by <th> text → get sibling <td> ──
-  const getTdByTh = (...thTexts) => {
-    const allTh = doc.querySelectorAll('th');
-    for (const th of allTh) {
-      const thNorm = th.textContent.trim().toLowerCase()
-        .replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u')
-        .replace(/[öÖ]/g, 'o').replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g');
-      for (const target of thTexts) {
-        const tNorm = target.toLowerCase()
-          .replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u')
-          .replace(/[öÖ]/g, 'o').replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g');
-        if (thNorm === tNorm || thNorm.startsWith(tNorm) || tNorm.startsWith(thNorm)) {
-          const td = th.nextElementSibling;
-          if (td && td.tagName === 'TD') return td.textContent.trim();
-        }
-      }
-    }
-    return '';
+  // ── TABLE DICTIONARY with homoglyph & Turkish character normalization ──
+  const tableData = {};
+  const normalizeKey = (str) => {
+    if (!str) return '';
+    return str.toLowerCase()
+      .replace(/\u0435/g, 'e') // Cyrillic e
+      .replace(/\u0430/g, 'a') // Cyrillic a
+      .replace(/\u043e/g, 'o') // Cyrillic o
+      .replace(/\u0440/g, 'p') // Cyrillic p
+      .replace(/\u0441/g, 'c') // Cyrillic c
+      .replace(/[ıİ]/g, 'i')
+      .replace(/[şŞ]/g, 's')
+      .replace(/[üÜ]/g, 'u')
+      .replace(/[öÖ]/g, 'o')
+      .replace(/[çÇ]/g, 'c')
+      .replace(/[ğĞ]/g, 'g')
+      .replace(/[^a-z0-9]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   };
 
-  marka = getTdByTh('marka / uretici', 'marka / yetici', 'marka', 'manufacturer', 'brand');
-  deste = getTdByTh('deste / pattern', 'deste', 'pattern', 'deck');
-  basimYili = getTdByTh('uretim yili', 'uretim yili', 'yil', 'yil', 'year');
-  ulke = getTdByTh('uretim yeri', 'uretim yeri', 'yer', 'place', 'country');
-  durum = getTdByTh('genel durum', 'durum', 'condition');
-  kartSayisi = getTdByTh('kart sayisi', 'kart sayisi', 'card count', 'kart adedi');
-  boyut = getTdByTh('boyut', 'size', 'ebat');
-  indeks = getTdByTh('indis', 'index', 'indeks');
-
-  // ── YEAR from text if not found ──
-  if (!basimYili) {
-    const bodyText = doc.body ? doc.body.textContent : '';
-    const yearMatch = bodyText.match(/\b((?:18|19|20)\d{2})\b/);
-    if (yearMatch) basimYili = yearMatch[1];
-  }
-
-  // ── COUNTRY from text if not found ──
-  if (!ulke) {
-    const bodyText = doc.body ? doc.body.textContent : '';
-    if (/abd|usa|united states/i.test(bodyText)) ulke = 'ABD';
-    else if (/ingiltere|england|uk|britain/i.test(bodyText)) ulke = 'İngiltere';
-    else if (/almanya|germany/i.test(bodyText)) ulke = 'Almanya';
-    else if (/avusturya|austria/i.test(bodyText)) ulke = 'Avusturya';
-    else if (/italya|italy/i.test(bodyText)) ulke = 'İtalya';
-    else if (/fransa|france/i.test(bodyText)) ulke = 'Fransa';
-  }
-
-  // ── ÖZET ──
-  const allH2 = doc.querySelectorAll('h2');
-  for (const h2 of allH2) {
-    const h2Text = h2.textContent.trim().toLowerCase();
-    if (h2Text.includes('tani̇t') || h2Text.includes('tanit') || h2Text.includes('not') || h2Text.includes('aciklama') || h2Text.includes('açıklama')) {
-      const section = h2.closest('.section') || h2.parentElement;
-      if (section) {
-        const noteEl = section.querySelector('.note p, .note, p');
-        if (noteEl) ozet = noteEl.textContent.trim();
-      }
-      break;
+  const rows = doc.querySelectorAll('tr');
+  for (const row of rows) {
+    const th = row.querySelector('th');
+    const tds = row.querySelectorAll('td');
+    let k = '', v = '';
+    if (th && tds.length >= 1) {
+      k = normalizeKey(th.textContent);
+      v = tds[0].textContent.trim();
+    } else if (tds.length >= 2) {
+      k = normalizeKey(tds[0].textContent);
+      v = tds[1].textContent.trim();
+    }
+    if (k && v) {
+      tableData[k] = v;
     }
   }
-  if (!ozet) {
-    const noteEl = doc.querySelector('.note p, .note');
-    if (noteEl) ozet = noteEl.textContent.trim();
+
+  // Also support regex for raw HTML rows (fallback)
+  const rawRows = cleanHtml.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) || [];
+  for (const rawRow of rawRows) {
+    const thM = rawRow.match(/<th[^>]*>([\s\S]*?)<\/th>/i);
+    const tdM = rawRow.match(/<td[^>]*>([\s\S]*?)<\/td>/i);
+    if (thM && tdM) {
+      const k = normalizeKey(thM[1].replace(/<[^>]+>/g, ''));
+      const v = tdM[1].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+      if (k && v && !tableData[k]) tableData[k] = v;
+    }
   }
+
+  // ── MARKA ──
+  const markaRaw = tableData['marka uretici'] || tableData['marka yetici'] || tableData['marka'] || tableData['manufacturer'] || tableData['brand'] || '';
+  if (markaRaw) {
+    marka = markaRaw.split('·')[0].trim();
+  } else {
+    const textAll = cleanHtml.toLowerCase();
+    if (textAll.includes('bicycle')) marka = 'Bicycle';
+    else if (textAll.includes('berliner spielkarten')) marka = 'Berliner Spielkarten';
+  }
+
+  // ── DESTE (Pattern / Deste name) ──
+  const desteRaw = tableData['deste pattern'] || tableData['pattern'] || tableData['deste'] || tableData['deck'] || '';
+  if (desteRaw) {
+    if (/rider back/i.test(desteRaw)) {
+      deste = 'Rider Back';
+    } else if (/skat rekord/i.test(desteRaw)) {
+      deste = 'SKAT Rekord';
+    } else {
+      deste = desteRaw.split('·')[0].trim();
+    }
+  } else {
+    const textAll = cleanHtml.toLowerCase();
+    if (textAll.includes('rider back')) deste = 'Rider Back';
+    else if (textAll.includes('skat rekord')) deste = 'SKAT Rekord';
+  }
+
+  // ── DURUM (Playing card condition - strictly no stamp terminology) ──
+  const desteDurumu = tableData['deste durumu'] || '';
+  const kartDurumu = tableData['kart durumu'] || '';
+  const kutuDurumu = tableData['kutu durumu'] || '';
+  const genelDurum = tableData['genel durum'] || tableData['durum'] || tableData['condition'] || '';
+
+  if (/kapali|kapalı|mühürlü/i.test(desteDurumu) || /kapali|kapalı|mühürlü/i.test(genelDurum)) {
+    durum = 'Kapalı';
+  } else if (/acil|açıl/i.test(desteDurumu) || /acil|açıl/i.test(genelDurum) || /acil|açıl/i.test(kartDurumu)) {
+    durum = 'Açılmış';
+  } else if (genelDurum) {
+    durum = genelDurum.replace(/damgal[ıi]|damgas[ıi]z/gi, '').trim();
+  } else if (desteDurumu) {
+    durum = desteDurumu.split('(')[0].trim();
+  } else if (kartDurumu) {
+    durum = kartDurumu.split('/')[0].trim();
+  }
+  // Sanitize any accidental stamp terminology
+  if (durum) {
+    durum = durum.replace(/damgal[ıi]|damgas[ıi]z/gi, '').replace(/^[\s·•\-,]+|[\s·•\-,]+$/g, '').trim();
+  }
+  if (!durum) durum = 'Açılmış';
+
+  // ── MENŞE / ÜRETİM YERİ ──
+  const yerRaw = tableData['uretim yeri'] || tableData['mense'] || tableData['yer'] || tableData['ulke'] || tableData['country'] || '';
+  if (/almanya|germany|deutschland|darmstadt/i.test(yerRaw)) {
+    ulke = 'Almanya';
+  } else if (/abd|usa|united states|kentucky|erlanger/i.test(yerRaw)) {
+    ulke = 'ABD';
+  } else if (/avusturya|austria/i.test(yerRaw)) {
+    ulke = 'Avusturya';
+  } else if (/fransa|france/i.test(yerRaw)) {
+    ulke = 'Fransa';
+  } else if (/italya|italy/i.test(yerRaw)) {
+    ulke = 'İtalya';
+  } else if (/ingiltere|england|uk|britain/i.test(yerRaw)) {
+    ulke = 'Birleşik Krallık';
+  } else if (yerRaw) {
+    ulke = yerRaw.split('·')[0].split(',')[0].trim();
+  }
+
+  // ── ÜRETİM YILI ──
+  const yilRaw = tableData['uretim yili'] || tableData['basim yili'] || tableData['yil'] || tableData['year'] || '';
+  const yMatch = yilRaw.match(/\b((?:18|19|20)\d{2})\b/);
+  if (yMatch) {
+    basimYili = yMatch[1];
+  } else if (/1970/i.test(yilRaw)) {
+    basimYili = '1970';
+  } else if (yilRaw) {
+    basimYili = yilRaw.split('(')[0].trim();
+  }
+
+  // ── KART SAYISI, BOYUT, İNDEKS ──
+  kartSayisi = tableData['kart sayisi'] || tableData['card count'] || '';
+  boyut = tableData['boyut'] || tableData['size'] || '';
+  indeks = tableData['i ndeks'] || tableData['indeks'] || tableData['indis'] || tableData['index'] || '';
+
+  // ── ÖZET ──
+  const noteEl = doc.querySelector('.note p, .note');
+  if (noteEl) ozet = noteEl.textContent.trim();
 
   return {
     title, subtitle, image, code, marka, deste, basimYili, ulke, durum, kartSayisi, boyut, indeks, ozet
@@ -1743,7 +1823,7 @@ function extractLegoverseInfoFromHtml(html) {
 }
 
 const DB_NAME = 'PullukDB';
-const DB_VERSION = 11; // v11: clear stale cache after country normalization fix
+const DB_VERSION = 12; // v12: fix MGP002 empty cache clobber & ACES HIGH fields
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const STORE_NAME = 'fileCache';
 
@@ -1785,48 +1865,19 @@ async function getFileFromCache(file) {
     const now = Date.now();
     const isExpired = cached && cached.cachedAt && (now - cached.cachedAt > CACHE_TTL_MS);
     if (cached && cached.modifiedTime === file.modifiedTime && !isExpired) {
-      file._title = cached._title;
-      file._subtitle = cached._subtitle;
-      file._image = cached._image;
-      file._code = cached._code;
-      file._country = cached._country;
-      file._year = cached._year;
-      file._htmlContent = cached._htmlContent;
-      file._katalogNo = cached._katalogNo;
-      file._ulke = cached._ulke;
-      file._basimYili = cached._basimYili;
-      file._basimYeri = cached._basimYeri;
-      file._nominalDeger = cached._nominalDeger;
-      file._pulTipi = cached._pulTipi;
-      file._ozet = cached._ozet;
-      file._durum = cached._durum;
-      file._artist = cached._artist;
-      file._album = cached._album;
-      file._plakSirketi = cached._plakSirketi;
-      file._format = cached._format;
-      file._genre = cached._genre;
-      file._pressing = cached._pressing;
-      file._matrixNo = cached._matrixNo;
-      file._condition = cached._condition;
-      file._brand = cached._brand;
-      file._model = cached._model;
-      file._scale = cached._scale;
-      file._origin = cached._origin;
-      file._series = cached._series;
-      file._material = cached._material;
-      file._modelYear = cached._modelYear;
-      file._productionYear = cached._productionYear;
-      file._yazar = cached._yazar;
-      file._yayinevi = cached._yayinevi;
-      file._dil = cached._dil;
-      file._tur = cached._tur;
-      file._marka = cached._marka;
-      file._model = cached._model;
-      file._deste = cached._deste;
-      file._ulke = cached._ulke;
-      file._kartSayisi = cached._kartSayisi;
-      file._boyut = cached._boyut;
-      file._indeks = cached._indeks;
+      const cacheFields = [
+        '_title', '_subtitle', '_image', '_code', '_country', '_year', '_htmlContent',
+        '_katalogNo', '_ulke', '_basimYili', '_basimYeri', '_nominalDeger', '_pulTipi',
+        '_ozet', '_durum', '_artist', '_album', '_plakSirketi', '_format', '_genre',
+        '_pressing', '_matrixNo', '_condition', '_brand', '_model', '_scale', '_origin',
+        '_series', '_material', '_modelYear', '_productionYear', '_yazar', '_yayinevi',
+        '_dil', '_tur', '_marka', '_deste', '_kartSayisi', '_boyut', '_indeks'
+      ];
+      for (const key of cacheFields) {
+        if (cached[key] !== undefined && cached[key] !== null && cached[key] !== '') {
+          file[key] = cached[key];
+        }
+      }
       return true;
     }
   } catch (e) {
