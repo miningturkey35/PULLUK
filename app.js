@@ -2865,10 +2865,10 @@ class GalleryManager {
       } else if (this.id === 'iskambil') {
         // İskambil: MARKA bazlı filtre
         if (file._marka) {
-          file.category = file._marka;
-          catSet.add(file._marka);
+          file.category = toEnUpper(file._marka);
+          catSet.add(toEnUpper(file._marka));
         } else if (file.category) {
-          catSet.add(file.category);
+          catSet.add(toEnUpper(file.category));
         } else if (file.isMock) {
           const parts = file.name.split(' - ');
           if (parts.length > 1) {
@@ -2938,7 +2938,7 @@ class GalleryManager {
 
     // Rebuild buttons from current categories
     categories.forEach(cat => {
-      const catLower = cat.toLocaleLowerCase('tr');
+      const catLower = cat.toLowerCase();
       const btn = document.createElement('button');
       btn.className = 'filter-btn';
       btn.dataset.filter = catLower;
