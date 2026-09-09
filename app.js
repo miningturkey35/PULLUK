@@ -596,43 +596,34 @@ async function fetchDriveFiles(folderId, noticeEl, type) {
   let allFiles = [];
   let pageToken = null;
 
-  try {
-    do {
-      const params = new URLSearchParams({
-        q: `'${folderId}' in parents and trashed=false`,
-        fields: 'nextPageToken, files(id, name, mimeType, webViewLink, modifiedTime, size, description)',
-        pageSize: 1000,
-        key: apiKey,
-        orderBy: 'name',
-      });
-      if (pageToken) params.set('pageToken', pageToken);
+  do {
+    const params = new URLSearchParams({
+      q: `'${folderId}' in parents and trashed=false`,
+      fields: 'nextPageToken, files(id, name, mimeType, webViewLink, modifiedTime, size, description)',
+      pageSize: 1000,
+      key: apiKey,
+      orderBy: 'name',
+    });
+    if (pageToken) params.set('pageToken', pageToken);
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000);
-      let res;
-      try {
-        res = await fetch(`${baseUrl}?${params}`, { signal: controller.signal });
-      } finally {
-        clearTimeout(timeoutId);
-      }
-      console.log(`[PULLUK] fetchDriveFiles: response ${res.status} for ${type}`);
-      if (!res.ok) throw new Error(`Drive API error: ${res.status} ${res.statusText}`);
-      const data = await res.json();
-
-      allFiles = allFiles.concat(data.files || []);
-      pageToken = data.nextPageToken || null;
-    } while (pageToken);
-
-    console.log(`[PULLUK] fetchDriveFiles: total ${allFiles.length} files for ${type}`);
-    return allFiles;
-  } catch (err) {
-    console.error(`[PULLUK] fetchDriveFiles: error for ${type}:`, err);
-    if (noticeEl) {
-      noticeEl.classList.remove('is-hidden');
-      noticeEl.querySelector('.api-notice-text').innerHTML = `<b>⚠️ Bağlantı Hatası</b>Google Drive bağlantısı kurulamadı: ${err.message}. Demo veriler gösteriliyor.`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    let res;
+    try {
+      res = await fetch(`${baseUrl}?${params}`, { signal: controller.signal });
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return generateMockFiles(type);
-  }
+    console.log(`[PULLUK] fetchDriveFiles: response ${res.status} for ${type}`);
+    if (!res.ok) throw new Error(`Drive API error: ${res.status} ${res.statusText}`);
+    const data = await res.json();
+
+    allFiles = allFiles.concat(data.files || []);
+    pageToken = data.nextPageToken || null;
+  } while (pageToken);
+
+  console.log(`[PULLUK] fetchDriveFiles: total ${allFiles.length} files for ${type}`);
+  return allFiles;
 }
 
 const BG_CLASSES = ['pdf-bg-1', 'pdf-bg-2', 'pdf-bg-3', 'pdf-bg-4', 'pdf-bg-5', 'pdf-bg-6'];
@@ -1948,6 +1939,7 @@ async function saveFileToCache(file) {
 const previewQueue = [];
 let isPreviewProcessing = false;
 const PREVIEW_BATCH_SIZE = 3;
+const PREVIEW_MAX_RETRIES = 3;
 
 async function processPreviewQueue() {
   if (isPreviewProcessing || previewQueue.length === 0) return;
@@ -2214,9 +2206,15 @@ async function processPreviewQueue() {
           clearTimeout(pt);
         }
         if (res.status === 429) {
-          console.warn('[PULLUK] Rate limit hit for', file.name, '— re-queuing');
-          previewQueue.push(item);
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          if ((item._retryCount || 0) < PREVIEW_MAX_RETRIES) {
+            item._retryCount = (item._retryCount || 0) + 1;
+            console.warn('[PULLUK] Rate limit hit for', file.name, `— re-queuing (retry ${item._retryCount}/${PREVIEW_MAX_RETRIES})`);
+            previewQueue.push(item);
+            await new Promise(resolve => setTimeout(resolve, 3000 * item._retryCount));
+          } else {
+            console.warn('[PULLUK] Rate limit: giving up on', file.name, 'after max retries');
+            if (titleEl) titleEl.textContent = file.name.replace(/\.(html|htm|pdf)$/i, '');
+          }
           return;
         }
         if (!res.ok) throw new Error(`alt=media error: ${res.status} ${res.statusText}`);
@@ -2339,7 +2337,15 @@ async function processPreviewQueue() {
         if (gallery) gallery.checkAndExtractCategory(file, card);
       } catch (err) {
         console.warn('[PULLUK] Preview extraction error for', file.name, err);
-        if (titleEl) titleEl.textContent = file.name.replace(/\.(html|htm|pdf)$/i, '');
+        if ((item._retryCount || 0) < PREVIEW_MAX_RETRIES) {
+          item._retryCount = (item._retryCount || 0) + 1;
+          console.log(`[PULLUK] Re-queuing ${file.name} (retry ${item._retryCount}/${PREVIEW_MAX_RETRIES})`);
+          previewQueue.push(item);
+          await new Promise(resolve => setTimeout(resolve, 2000 * item._retryCount));
+        } else {
+          console.warn(`[PULLUK] Giving up on ${file.name} after ${PREVIEW_MAX_RETRIES} retries`);
+          if (titleEl) titleEl.textContent = file.name.replace(/\.(html|htm|pdf)$/i, '');
+        }
       }
     }));
 
@@ -2623,6 +2629,7 @@ class GalleryManager {
     }, 8000);
 
     const hasPrecompiled = Boolean(window.PULLUK_COLLECTION_DATA && window.PULLUK_COLLECTION_DATA[this.id] && window.PULLUK_COLLECTION_DATA[this.id].length > 0);
+    let driveApiFailed = false;
 
     try {
       const driveFiles = await fetchDriveFiles(this.folderId, hasPrecompiled ? null : this.els.notice, this.id);
@@ -2684,9 +2691,14 @@ class GalleryManager {
       }
     } catch (err) {
       console.error(`[PULLUK] load() error for ${this.id}:`, err);
+      driveApiFailed = true;
     } finally {
       clearTimeout(hideTimeout);
       if (this.els.loading) this.els.loading.style.display = 'none';
+      if (hasPrecompiled && this.els.notice && driveApiFailed) {
+        this.els.notice.classList.remove('is-hidden');
+        this.els.notice.querySelector('.api-notice-text').innerHTML = `<b>⚠️ Güncellenemedi</b> Google Drive'dan güncel veri alınamadı. Yeni eklenen parçalar görünmeyebilir.`;
+      }
     }
   }
 
