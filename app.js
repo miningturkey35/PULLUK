@@ -1959,8 +1959,9 @@ async function processPreviewQueue() {
     }
 
     const results = await Promise.allSettled(batch.map(async (item) => {
-      const { file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, gallery } = item;
+      const { file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, gallery, koleksiyonEl, ulkeEl, yilEl, nominalEl, tipiEl, durumEl, galleryId } = item;
       const apiKey = CONFIG.GOOGLE_API_KEY.trim();
+      console.log(`[PULLUK] processPreviewQueue: processing ${file.name} — _title=${file._title}, _image=${file._image ? 'yes' : 'no'}, _code=${file._code}, _country=${file._country}`);
 
       if (file._title) {
         // Re-extract and normalize missing/outdated fields from cached htmlContent
@@ -2225,6 +2226,7 @@ async function processPreviewQueue() {
         if (!res.ok) throw new Error(`alt=media error: ${res.status} ${res.statusText}`);
         const html = await res.text();
         const extracted = extractStampInfoFromHtml(html);
+        console.log(`[PULLUK] extractStampInfoFromHtml for ${file.name}:`, { title: extracted.title, code: extracted.code, country: extracted.country, year: extracted.year, image: extracted.image ? 'yes' : 'no', nominalDeger: extracted.nominalDeger, pulTipi: extracted.pulTipi });
 
         file._title = extracted.title || file.name.replace(/\.(html|htm|pdf)$/i, '');
         file._subtitle = extracted.subtitle;
@@ -2349,7 +2351,34 @@ async function processPreviewQueue() {
           await new Promise(resolve => setTimeout(resolve, 2000 * item._retryCount));
         } else {
           console.warn(`[PULLUK] Giving up on ${file.name} after ${PREVIEW_MAX_RETRIES} retries`);
-          if (titleEl) titleEl.textContent = file.name.replace(/\.(html|htm|pdf)$/i, '');
+          const fallbackTitle = file.name.replace(/\.(html|htm|pdf)$/i, '');
+          if (titleEl) titleEl.textContent = fallbackTitle;
+          // Also update 5-field card values so they don't stay as em-dash
+          const fileNameNoExt = fallbackTitle.toUpperCase();
+          if (koleksiyonEl) {
+            const valEl = koleksiyonEl.querySelector('.pdf-card-field__value');
+            if (valEl && !valEl.textContent.trim()) valEl.textContent = file._code || file._katalogNo || fileNameNoExt;
+          }
+          if (ulkeEl) {
+            const valEl = ulkeEl.querySelector('.pdf-card-field__value');
+            if (valEl && !valEl.textContent.trim()) valEl.textContent = file._country || file._ulke || '—';
+          }
+          if (yilEl) {
+            const valEl = yilEl.querySelector('.pdf-card-field__value');
+            if (valEl && !valEl.textContent.trim()) valEl.textContent = file._year || file._basimYili || '—';
+          }
+          if (nominalEl) {
+            const valEl = nominalEl.querySelector('.pdf-card-field__value');
+            if (valEl && !valEl.textContent.trim()) valEl.textContent = file._nominal || file._nominalDeger || '—';
+          }
+          if (tipiEl) {
+            const valEl = tipiEl.querySelector('.pdf-card-field__value');
+            if (valEl && !valEl.textContent.trim()) valEl.textContent = file._pulTipi || file._type || '—';
+          }
+          if (durumEl) {
+            const valEl = durumEl.querySelector('.pdf-card-field__value');
+            if (valEl && !valEl.textContent.trim()) valEl.textContent = file._durum || '—';
+          }
         }
       }
     }));
@@ -2363,6 +2392,7 @@ async function processPreviewQueue() {
 
 function updateCardUI(item) {
   const { file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, isDiecast, brandEl, yearEl, badgeBrandEl, badgeYearEl, badgeCodeEl, h3El, koleksiyonEl, ulkeEl, yilEl, nominalEl, tipiEl, durumEl, galleryId } = item;
+  console.log(`[PULLUK] updateCardUI for ${file.name}:`, { _title: file._title, _code: file._code, _country: file._country, _year: file._year, _nominalDeger: file._nominalDeger, _pulTipi: file._pulTipi, _durum: file._durum, koleksiyonEl: !!koleksiyonEl, ulkeEl: !!ulkeEl });
 
   // Always normalize country for consistent display
   if (file._country) file._country = normalizeCountryName(file._country);
