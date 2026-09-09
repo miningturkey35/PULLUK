@@ -386,7 +386,7 @@ function generateMockFiles(type) {
     : type === 'diecast' ? ['Klasik', 'Spor', 'Off-Road', 'Kamyon']
       : type === 'allother' ? ['Antika', 'Madeni Para', 'Kartpostal', 'Kitap', 'Çeşitli']
         : type === 'plak' ? ['Rock', 'Pop', 'Jazz', 'Blues', 'Klasik', 'Türkçe', 'Elektronik', 'Hip Hop', 'Folk', 'Metal']
-          : type === 'basilsanat' ? ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera']
+          : type === 'basilsanat' ? ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera', 'Diğer']
             : type === 'iskambil' ? ['Poker', 'Bridge', 'Skat', 'Tarot', 'Piatnik', 'Bicycle', 'Fournier', 'Kemper & Troyer']
               : ['33lük', '45lik', 'Yerli', 'Yabancı', 'Jazz', 'Rock'];
 
@@ -1254,6 +1254,26 @@ function extractBasilsanatInfoFromHtml(html) {
     title, subtitle, image, code, yazar, yayinevi, dil, tur, year, basimYili, basimYeri, durum, ozet
   };
 }
+
+// ─── BASILSANAT TÜR NORMALIZE ────────────────────────────────────────────────
+// Normalizes raw 'tür' values to canonical display labels
+const BASILSANAT_TUR_CANONICAL = ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera', 'Diğer'];
+function normalizeBasilsanatTur(raw) {
+  if (!raw) return '';
+  const toAscii = s => s.replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[üÜ]/g, 'u')
+    .replace(/[öÖ]/g, 'o').replace(/[çÇ]/g, 'c').replace(/[ğĞ]/g, 'g').toLowerCase();
+  const norm = toAscii(raw.trim());
+  for (const canon of BASILSANAT_TUR_CANONICAL) {
+    if (norm === toAscii(canon)) return canon;
+  }
+  // Partial match fallback
+  for (const canon of BASILSANAT_TUR_CANONICAL) {
+    const cn = toAscii(canon);
+    if (norm.includes(cn) || cn.includes(norm)) return canon;
+  }
+  return raw.trim() || 'Diğer';
+}
+
 // ─── İSKAMBIL EXTRACTOR ────────────────────────────────────────────────────
 function extractIskambilInfoFromHtml(html) {
   const EMPTY = { title: '', subtitle: '', image: '', code: '', marka: '', deste: '', basimYili: '', ulke: '', durum: '', kartSayisi: '', boyut: '', indeks: '', ozet: '' };
@@ -1926,9 +1946,12 @@ async function processPreviewQueue() {
           file._yazar = basData.yazar;
           file._yayinevi = basData.yayinevi;
           file._dil = basData.dil;
-          file._tur = basData.tur;
+          file._tur = normalizeBasilsanatTur(basData.tur);
+          if (file._tur) { file.category = file._tur; if (card) card.dataset.category = file._tur.toLocaleLowerCase('tr'); }
           file._durum = basData.durum || file._durum;
           file._basimYeri = basData.basimYeri || file._basimYeri;
+          file._year = basData.year || basData.basimYili || file._year;
+          file._basimYili = basData.basimYili || file._basimYili;
           if (basData.code) file._code = basData.code;
           if (basData.title && !file._title) file._title = basData.title;
           if (basData.subtitle && !file._subtitle) file._subtitle = basData.subtitle;
@@ -2037,9 +2060,12 @@ async function processPreviewQueue() {
           file._yazar = basData.yazar;
           file._yayinevi = basData.yayinevi;
           file._dil = basData.dil;
-          file._tur = basData.tur;
+          file._tur = normalizeBasilsanatTur(basData.tur);
+          if (file._tur) { file.category = file._tur; if (card) card.dataset.category = file._tur.toLocaleLowerCase('tr'); }
           file._durum = basData.durum || file._durum;
           file._basimYeri = basData.basimYeri || file._basimYeri;
+          file._year = basData.year || basData.basimYili || file._year;
+          file._basimYili = basData.basimYili || file._basimYili;
           if (basData.code) file._code = basData.code;
           if (basData.title && !file._title) file._title = basData.title;
           if (basData.subtitle && !file._subtitle) file._subtitle = basData.subtitle;
@@ -2169,9 +2195,12 @@ async function processPreviewQueue() {
           file._yazar = basData.yazar;
           file._yayinevi = basData.yayinevi;
           file._dil = basData.dil;
-          file._tur = basData.tur;
+          file._tur = normalizeBasilsanatTur(basData.tur);
+          if (file._tur) { file.category = file._tur; if (card) card.dataset.category = file._tur.toLocaleLowerCase('tr'); }
           file._durum = basData.durum || file._durum;
           file._basimYeri = basData.basimYeri || file._basimYeri;
+          file._year = basData.year || basData.basimYili || file._year;
+          file._basimYili = basData.basimYili || file._basimYili;
           if (basData.code) file._code = basData.code;
           if (basData.title && !file._title) file._title = basData.title;
           if (basData.subtitle && !file._subtitle) file._subtitle = basData.subtitle;
@@ -2562,7 +2591,7 @@ class GalleryManager {
         this.updateFilterButtonsDynamically();
       }
     } else if (isBasilsanat) {
-      const BASILSANAT_CATEGORIES = ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera'];
+      const BASILSANAT_CATEGORIES = ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera', 'Diğer'];
       if (file.category && BASILSANAT_CATEGORIES.includes(file.category)) {
         if (card) card.dataset.category = file.category.toLowerCase();
         this.updateFilterButtonsDynamically();
@@ -2625,7 +2654,7 @@ class GalleryManager {
         }
       } else if (isBasilsanat) {
         // Basılı Eser: Kitap, Çizgi Roman, Dergi, Gazete, Katalog, Broşür, Efemera
-        const BASILSANAT_CATEGORIES = ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera'];
+        const BASILSANAT_CATEGORIES = ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera', 'Diğer'];
         if (file.category && BASILSANAT_CATEGORIES.includes(file.category)) {
           catSet.add(file.category);
         } else {
@@ -2684,7 +2713,7 @@ class GalleryManager {
 
     // Predefined country order for non-diecast galleries
     const countryOrder = STAMP_COUNTRIES.map(c => c.name);
-    const basilsanatOrder = ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera'];
+    const basilsanatOrder = ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera', 'Diğer'];
 
     return Array.from(catSet).sort((a, b) => {
       if (isBasilsanat) {
