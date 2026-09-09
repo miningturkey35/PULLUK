@@ -17,9 +17,12 @@ const DATA_FILE = path.join(__dirname, 'data', 'collection_data.js');
 function fetchUrl(url) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { timeout: 60000 }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => resolve({ status: res.statusCode, body: data }));
+      const chunks = [];
+      res.on('data', chunk => chunks.push(chunk));
+      res.on('end', () => {
+        const body = Buffer.concat(chunks).toString('utf8');
+        resolve({ status: res.statusCode, body });
+      });
     });
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
