@@ -919,11 +919,15 @@ html[data-theme="dark"] footer {
   .footer-bottom { flex-direction: column; text-align: center; }
   .collector-stats { grid-template-columns: 1fr; }
   .stamp-grid { grid-template-columns: repeat(2, 1fr); }
-  .pdf-card { padding: 12px; gap: 12px; }
-  .pdf-icon-frame { width: 56px; height: 56px; border-radius: 8px; }
-  .pdf-name { font-size: .88rem; }
-  .pdf-meta { font-size: .74rem; }
-  .pdf-open-btn { width: 30px; height: 30px; }
+  .pdf-card { padding: 10px; gap: 10px; }
+  .pdf-icon-frame { width: 52px; height: 52px; border-radius: 8px; }
+  .pdf-card-info { grid-template-columns: 1fr 1fr; gap: 2px 6px; }
+  .pdf-card-field__label { font-size: .42rem; }
+  .pdf-card-field__value { font-size: .62rem; }
+  .pdf-name { font-size: .82rem; }
+  .pdf-meta { font-size: .7rem; }
+  .pdf-open-btn { width: 28px; height: 28px; }
+  .plak-card { min-width: auto; }
 }
 
 /* ─── Plak (Vinyl) Card ─── */

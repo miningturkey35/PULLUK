@@ -3623,6 +3623,34 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
   }
 
   if (content) {
+    // Inject responsive overrides for mobile viewing
+    const mobileCSS = `
+      <style id="pulluk-viewer-mobile">
+        @media (max-width: 700px) {
+          .card { max-width: 100% !important; margin: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+          body { padding: 12px 8px 32px !important; }
+          header { padding: 16px 14px 12px !important; }
+          h1 { font-size: 1.15rem !important; }
+          .subtitle { font-size: .82rem !important; }
+          .images { flex-direction: column !important; align-items: center !important; padding: 16px 10px !important; gap: 14px !important; }
+          .img-wrap { max-width: 100% !important; }
+          .img-wrap img { max-height: 280px !important; }
+          .content { padding: 8px 14px 20px !important; }
+          table { font-size: .82rem !important; display: block; overflow-x: auto; }
+          th, td { padding: 7px 8px !important; font-size: .8rem !important; }
+          .history { font-size: .85rem !important; }
+          footer { padding: 12px 14px !important; }
+        }
+      </style>`;
+    // Insert mobile CSS before </head> or at start of <body>
+    if (content.includes('</head>')) {
+      content = content.replace('</head>', mobileCSS + '</head>');
+    } else if (content.includes('<body>')) {
+      content = content.replace('<body>', '<body>' + mobileCSS);
+    } else {
+      content = mobileCSS + content;
+    }
+
     currentFileHtml = content;
     const mime = mimeType || 'text/html';
     if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
