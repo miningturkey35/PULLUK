@@ -945,91 +945,19 @@ html[data-theme="dark"] .plak-card:hover {
 }
 
 .plak-icon-frame {
-  width: 160px;
-  height: 160px;
-  border-radius: 12px;
+  width: 90px;
+  height: 90px;
+  border-radius: 10px;
   background: linear-gradient(135deg, var(--gold-light), var(--coral-light));
   flex: none;
   overflow: hidden;
 }
 
-.plak-card-info {
-  grid-template-columns: 1fr 1fr !important;
-  gap: 2px 12px !important;
-}
-
-/* Album title and Koleksiyon No side by side */
-.plak-field-title,
-.plak-field-collection {
-  grid-column: span 1;
-}
-.plak-field-title .pdf-card-field__value {
-  font-family: var(--font-display);
-  font-size: .78rem;
-  font-weight: 700;
-  color: var(--ink);
-  line-height: 1.25;
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: unset !important;
-  word-break: break-word;
-}
-html[data-theme="dark"] .plak-field-title .pdf-card-field__value {
-  color: var(--ink);
-}
-.plak-card:hover .plak-field-title .pdf-card-field__value {
-  color: var(--gold);
-}
-
-/* Koleksiyon No — normal field (no highlight) */
-.plak-field-collection .pdf-card-field__value {
-  font-family: var(--font-display);
-  font-size: .72rem;
-  font-weight: 500;
-  white-space: nowrap !important;
-}
-
-/* Allow text wrapping for plak card values */
-.plak-card .pdf-card-field__value {
-  font-family: var(--font-display);
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: unset !important;
-  line-height: 1.3;
-}
-html[data-theme="dark"] .plak-card .pdf-card-field__value {
-  color: #F1F4F9;
-}
-
-/* Exception for format badge — no uppercase, keep mono style */
-.plak-field-format .pdf-card-field__value {
-  font-family: var(--font-mono);
-  font-size: .6rem;
-  letter-spacing: .06em;
-  background: var(--gold-light);
-  color: var(--gold);
-  padding: 1px 6px;
-  border-radius: 3px;
-  display: inline-block;
-  width: auto;
-  white-space: nowrap !important;
-}
-html[data-theme="dark"] .plak-field-format .pdf-card-field__value {
-  background: var(--gold-light);
-  color: var(--gold);
-}
-/* Format field spans full width at bottom */
-.plak-field-format--full {
-  grid-column: 1 / -1 !important;
-}
+/* Plak card uses base pdf-card-info grid (2-col, 8px gap) — no overrides */
 
 /* Plak card labels: consistent color, artist = gold */
 .plak-card .pdf-card-field__label {
   color: var(--ink-faint);
-  font-size: .42rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 html[data-theme="dark"] .plak-card .pdf-card-field__label {
   color: rgba(255,255,255,.4);
@@ -1041,15 +969,26 @@ html[data-theme="dark"] .plak-field-artist .pdf-card-field__label {
   color: var(--gold) !important;
 }
 
+/* Format badge (gold highlight) */
+.plak-field-format .pdf-card-field__value {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  letter-spacing: .04em;
+  background: var(--gold-light);
+  color: var(--gold);
+  padding: 1px 5px;
+  border-radius: 3px;
+  display: inline-block;
+  width: auto;
+}
+html[data-theme="dark"] .plak-field-format .pdf-card-field__value {
+  background: var(--gold-light);
+  color: var(--gold);
+}
+
 @media (max-width: 560px) {
   .plak-card { min-width: 0; flex-direction: column; align-items: flex-start; }
   .plak-icon-frame { width: 100%; height: auto; aspect-ratio: 1/1; border-radius: 10px; }
-  .plak-card-info { grid-template-columns: 1fr !important; width: 100%; }
-  .plak-field-title { grid-column: 1; }
-  .plak-field-collection { grid-column: 1; }
-}
-@media (max-width: 400px) {
-  .plak-card { padding: 10px; }
 }
 
 /* ─── Legoverse (LEGO) Card ─── */
@@ -1067,89 +1006,17 @@ html[data-theme="dark"] .legoverse-card:hover {
 }
 
 .lego-icon-frame {
-  width: 160px;
-  height: 160px;
-  border-radius: 12px;
+  width: 90px;
+  height: 90px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #FFD700, #FF6B35);
   flex: none;
   overflow: hidden;
 }
 
-.lego-card-info {
-  grid-template-columns: 1fr 1fr !important;
-  gap: 4px 14px !important;
-}
+/* LEGO card uses base pdf-card-info grid — no overrides */
 
-.lego-field-title,
-.lego-field-collection {
-  grid-column: span 1;
-}
-.lego-field-title .pdf-card-field__value {
-  font-family: var(--font-display);
-  font-size: .78rem;
-  font-weight: 700;
-  color: var(--ink);
-  line-height: 1.25;
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: unset !important;
-  word-break: break-word;
-}
-html[data-theme="dark"] .lego-field-title .pdf-card-field__value {
-  color: var(--ink);
-}
-.legoverse-card:hover .lego-field-title .pdf-card-field__value {
-  color: var(--gold);
-}
-
-.lego-field-collection .pdf-card-field__value {
-  font-family: var(--font-display);
-  font-size: .72rem;
-  font-weight: 500;
-  white-space: nowrap !important;
-}
-
-.legoverse-card .pdf-card-field__value {
-  font-family: var(--font-display);
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: unset !important;
-  line-height: 1.3;
-}
-html[data-theme="dark"] .legoverse-card .pdf-card-field__value {
-  color: #F1F4F9;
-}
-
-.lego-field-setno .pdf-card-field__value {
-  font-family: var(--font-mono);
-  font-size: .6rem;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  background: #FFD700;
-  color: #e3000b;
-  padding: 1px 6px;
-  border-radius: 3px;
-  display: inline-block;
-  width: auto;
-  white-space: nowrap !important;
-}
-html[data-theme="dark"] .lego-field-setno .pdf-card-field__value {
-  background: #FFD700;
-  color: #e3000b;
-}
-.lego-field-rarity .pdf-card-field__value {
-  font-family: var(--font-mono);
-  font-size: .6rem;
-  letter-spacing: .06em;
-  background: var(--gold-light);
-  color: var(--gold);
-  padding: 1px 6px;
-  border-radius: 3px;
-  display: inline-block;
-  width: auto;
-  white-space: nowrap !important;
-}
-
+/* LEGO card labels */
 .legoverse-card .pdf-card-field__label {
   color: var(--ink-faint);
 }
@@ -1163,15 +1030,39 @@ html[data-theme="dark"] .lego-field-theme .pdf-card-field__label {
   color: var(--gold) !important;
 }
 
+/* LEGO Set No badge (red on gold) */
+.lego-field-setno .pdf-card-field__value {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  letter-spacing: .04em;
+  background: #FFD700;
+  color: #e3000b;
+  padding: 1px 5px;
+  border-radius: 3px;
+  display: inline-block;
+  width: auto;
+}
+html[data-theme="dark"] .lego-field-setno .pdf-card-field__value {
+  background: #FFD700;
+  color: #e3000b;
+}
+
+/* LEGO Rarity badge */
+.lego-field-rarity .pdf-card-field__value {
+  font-family: var(--font-mono);
+  font-size: .58rem;
+  letter-spacing: .04em;
+  background: var(--gold-light);
+  color: var(--gold);
+  padding: 1px 5px;
+  border-radius: 3px;
+  display: inline-block;
+  width: auto;
+}
+
 @media (max-width: 560px) {
   .legoverse-card { min-width: 0; flex-direction: column; align-items: flex-start; }
   .lego-icon-frame { width: 100%; height: auto; aspect-ratio: 1/1; border-radius: 10px; }
-  .lego-card-info { grid-template-columns: 1fr !important; width: 100%; }
-  .lego-field-title { grid-column: 1; }
-  .lego-field-collection { grid-column: 1; }
-}
-@media (max-width: 400px) {
-  .legoverse-card { padding: 10px; }
 }
 
 /* ─── PDF Card Color Variations ─── */

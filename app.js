@@ -2575,28 +2575,25 @@ function updateCardUI(item) {
        if (fallbackEl) fallbackEl.style.display = 'none';
      }
      
-     // Update all plak-specific fields
-     const plakFields = [
-       { el: 'plak-field-title', value: file._album || '' },
-       { el: 'plak-field-artist', value: file._artist || '' },
-       { el: 'plak-field-label', value: file._plakSirketi || '' },
-       { el: 'plak-field-genre', value: file._genre || '' },
-       { el: 'plak-field-katalog', value: file._katalogNo || '' },
-       { el: 'plak-field-year', value: file._year || '' },
-       { el: 'plak-field-pressing', value: file._pressing || '' },
-       { el: 'plak-field-collection', value: fileNameNoExt || '' },
-       { el: 'plak-field-format', value: file._format || '' }
-     ];
-     
-     plakFields.forEach(field => {
-       const fieldEl = card.querySelector(`.${field.el}`);
-       if (fieldEl) {
-         const valueEl = fieldEl.querySelector('.pdf-card-field__value');
-         if (valueEl) {
-           valueEl.textContent = field.value || '—';
-         }
-       }
-     });
+      // Update all plak-specific fields by index
+      const plakValues = [
+        file._album || '',
+        file._artist || '',
+        file._plakSirketi || '',
+        file._year || '',
+        file._format || '',
+        fileNameNoExt || ''
+      ];
+      
+      const plakFieldEls = card.querySelectorAll('.pdf-card-info .pdf-card-field');
+      plakFieldEls.forEach((fieldEl, i) => {
+        if (i < plakValues.length) {
+          const valueEl = fieldEl.querySelector('.pdf-card-field__value');
+          if (valueEl) {
+            valueEl.textContent = plakValues[i] || '—';
+          }
+        }
+      });
    }
  }
 
@@ -3183,8 +3180,8 @@ class GalleryManager {
         </div>
       </div>
       <div class="pdf-card-main">
-        <div class="pdf-card-info plak-card-info">
-          <div class="pdf-card-field plak-field-title">
+        <div class="pdf-card-info">
+          <div class="pdf-card-field">
             <span class="pdf-card-field__label">Albüm</span>
             <span class="pdf-card-field__value pdf-card-title-value">${albumName || initialTitle || '—'}</span>
           </div>
@@ -3192,33 +3189,21 @@ class GalleryManager {
             <span class="pdf-card-field__label">Sanatçı</span>
             <span class="pdf-card-field__value">${artist || '—'}</span>
           </div>
-          <div class="pdf-card-field plak-field-label">
+          <div class="pdf-card-field">
             <span class="pdf-card-field__label">Şirket</span>
             <span class="pdf-card-field__value">${plakSirketi || '—'}</span>
           </div>
-          <div class="pdf-card-field plak-field-genre">
-            <span class="pdf-card-field__label">Tür</span>
-            <span class="pdf-card-field__value">${genre || '—'}</span>
-          </div>
-          <div class="pdf-card-field plak-field-katalog">
-            <span class="pdf-card-field__label">Katalog</span>
-            <span class="pdf-card-field__value">${katalogNo || '—'}</span>
-          </div>
-          <div class="pdf-card-field plak-field-year">
+          <div class="pdf-card-field">
             <span class="pdf-card-field__label">Yıl</span>
             <span class="pdf-card-field__value">${year || '—'}</span>
           </div>
-          <div class="pdf-card-field plak-field-pressing">
-            <span class="pdf-card-field__label">Basım</span>
-            <span class="pdf-card-field__value">${pressing || '—'}</span>
-          </div>
-          <div class="pdf-card-field plak-field-collection">
-            <span class="pdf-card-field__label">Koleksiyon</span>
-            <span class="pdf-card-field__value">${fileNameNoExt || '—'}</span>
-          </div>
-          <div class="pdf-card-field plak-field-format plak-field-format--full">
+          <div class="pdf-card-field plak-field-format">
             <span class="pdf-card-field__label">Format</span>
             <span class="pdf-card-field__value">${formatInfo || '—'}</span>
+          </div>
+          <div class="pdf-card-field">
+            <span class="pdf-card-field__label">Koleksiyon</span>
+            <span class="pdf-card-field__value">${fileNameNoExt || '—'}</span>
           </div>
         </div>
       </div>
@@ -3231,7 +3216,7 @@ class GalleryManager {
 
     const imgEl = card.querySelector('.card-img-el');
     const fallbackEl = card.querySelector('.card-fallback-el');
-    const titleEl = card.querySelector('.plak-field-title .pdf-card-title-value');
+    const titleEl = card.querySelector('.pdf-card-title-value');
     const subEl = card.querySelector('.plak-field-artist .pdf-card-field__value');
 
     // Queue for preview extraction if we don't have full data yet
@@ -3308,47 +3293,31 @@ class GalleryManager {
         </div>
       </div>
       <div class="pdf-card-main">
-        <div class="pdf-card-info lego-card-info">
-          <div class="pdf-card-field lego-field-title">
+        <div class="pdf-card-info">
+          <div class="pdf-card-field">
             <span class="pdf-card-field__label">Set Adı</span>
             <span class="pdf-card-field__value pdf-card-title-value">${initialTitle || '—'}</span>
           </div>
           <div class="pdf-card-field lego-field-setno">
-            <span class="pdf-card-field__label">LEGO Set No</span>
+            <span class="pdf-card-field__label">Set No</span>
             <span class="pdf-card-field__value">${setNo || '—'}</span>
           </div>
           <div class="pdf-card-field lego-field-theme">
             <span class="pdf-card-field__label">Tema</span>
             <span class="pdf-card-field__value">${theme || '—'}${subTheme ? ' — ' + subTheme : ''}</span>
           </div>
-          <div class="pdf-card-field lego-field-year">
+          <div class="pdf-card-field">
             <span class="pdf-card-field__label">Yıl</span>
             <span class="pdf-card-field__value">${year || '—'}</span>
           </div>
-          <div class="pdf-card-field lego-field-pieces">
+          <div class="pdf-card-field">
             <span class="pdf-card-field__label">Parça</span>
             <span class="pdf-card-field__value">${pieceCount || '—'}</span>
-          </div>
-          <div class="pdf-card-field lego-field-minifig">
-            <span class="pdf-card-field__label">Minifigür</span>
-            <span class="pdf-card-field__value">${minifigCount || '—'}</span>
-          </div>
-          <div class="pdf-card-field lego-field-collection">
-            <span class="pdf-card-field__label">Koleksiyon No</span>
-            <span class="pdf-card-field__value">${fileNameNoExt || '—'}</span>
           </div>
           <div class="pdf-card-field lego-field-rarity">
             <span class="pdf-card-field__label">Nadirlik</span>
             <span class="pdf-card-field__value">${rarity || '—'}</span>
           </div>
-          ${setStatus ? `<div class="pdf-card-field lego-field-status">
-            <span class="pdf-card-field__label">Üretim Durumu</span>
-            <span class="pdf-card-field__value">${setStatus}</span>
-          </div>` : ''}
-          ${estValue ? `<div class="pdf-card-field lego-field-value">
-            <span class="pdf-card-field__label">Tahmini Değer</span>
-            <span class="pdf-card-field__value">${estValue}</span>
-          </div>` : ''}
         </div>
       </div>
       <div class="pdf-card-action">
@@ -3360,7 +3329,7 @@ class GalleryManager {
 
     const imgEl = card.querySelector('.card-img-el');
     const fallbackEl = card.querySelector('.card-fallback-el');
-    const titleEl = card.querySelector('.lego-field-title .pdf-card-title-value');
+    const titleEl = card.querySelector('.pdf-card-title-value');
 
     if (!file.isMock && (!file._image || !file._setName) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim()) {
