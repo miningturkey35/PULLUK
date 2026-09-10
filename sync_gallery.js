@@ -121,11 +121,26 @@ async function main() {
   const existingCodes = new Set(data.galeri.map(f => f._code).filter(Boolean));
   console.log(`   Current gallery entries: ${data.galeri.length}\n`);
 
-  // 3. Find new files and modified files
+  // 3. Find new files, renamed-ID files, and modified files
   const newFiles = driveFiles.filter(f => !existingIds.has(f.id));
 
-  // Build a map of existing entries by id for quick lookup
+  // Build maps for quick lookup
   const existingMap = new Map(data.galeri.map(f => [f.id, f]));
+  const existingNameMap = new Map(data.galeri.map(f => [f.name, f]));
+  const existingCodeMap = new Map(data.galeri.map(f => [f._code, f]).filter(([k]) => k));
+
+  // Find renamed-ID files: Drive files with same name but different ID than what's in collection
+  // These need to be updated (ID changed, e.g. file re-uploaded)
+  const renamedFiles = [];
+  const trulyNewFiles = [];
+  for (const driveFile of newFiles) {
+    const existingByName = existingNameMap.get(driveFile.id === undefined ? '' : driveFile.name);
+    if (existingByName) {
+      renamedFiles.push(driveFile);
+    } else {
+      trulyNewFiles.push(driveFile);
+    }
+  }
 
   // Find modified files: existing entries whose modifiedTime is older than Drive's
   const modifiedFiles = [];
@@ -136,14 +151,18 @@ async function main() {
     }
   }
 
-  console.log(`3. New files: ${newFiles.length}, Modified files: ${modifiedFiles.length}`);
-  if (newFiles.length === 0 && modifiedFiles.length === 0) {
+  console.log(`3. New files: ${trulyNewFiles.length}, Renamed-ID files: ${renamedFiles.length}, Modified files: ${modifiedFiles.length}`);
+  if (trulyNewFiles.length === 0 && renamedFiles.length === 0 && modifiedFiles.length === 0) {
     console.log('   Nothing to do!');
     return;
   }
-  if (newFiles.length > 0) {
+  if (trulyNewFiles.length > 0) {
     console.log('   New:');
-    newFiles.forEach(f => console.log(`     - ${f.name} (${f.id})`));
+    trulyNewFiles.forEach(f => console.log(`     - ${f.name} (${f.id})`));
+  }
+  if (renamedFiles.length > 0) {
+    console.log('   Renamed-ID:');
+    renamedFiles.forEach(f => console.log(`     - ${f.name} (${f.id})`));
   }
   if (modifiedFiles.length > 0) {
     console.log('   Modified:');
@@ -151,10 +170,59 @@ async function main() {
   }
   console.log('');
 
-  // 4. Fetch and extract metadata for each new file
-  console.log('4. Fetching metadata from Drive for new files...');
+  // 4. Handle renamed-ID files: update existing entry with new Drive ID and fresh metadata
+  console.log('4. Updating renamed-ID files...');
+  let renamed = 0;
+  for (const file of renamedFiles) {
+    try {
+      console.log(`   Fetching ${file.name}...`);
+      const mediaUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${API_KEY}`;
+      const mediaRes = await fetchUrl(mediaUrl);
+      if (mediaRes.status !== 200) {
+        console.log(`   ⚠ ${file.name}: HTTP ${mediaRes.status} — skipping`);
+        continue;
+      }
+      const html = mediaRes.body;
+      const meta = extractMetadata(html);
+
+      const existing = existingNameMap.get(file.name);
+      if (!existing) continue;
+
+      // Determine code from filename or extracted
+      const codeMatch = file.name.match(/(MG\d+)/i);
+      const code = meta.code || (codeMatch ? codeMatch[1].toUpperCase() : existing._code);
+
+      let cleanTitle = stripPatterns(meta.title);
+      let cleanSubtitle = stripPatterns(meta.subtitle);
+
+      // Update the entry with new ID and fresh metadata
+      const oldId = existing.id;
+      existing.id = file.id;
+      existing.name = file.name;
+      existing._title = cleanTitle || existing._title;
+      existing._subtitle = cleanSubtitle || existing._subtitle;
+      existing._image = meta.image || existing._image;
+      existing._code = code;
+      existing._country = meta.country || existing._country;
+      existing._year = meta.year || existing._year;
+      existing._nominalDeger = meta.nominalDeger || existing._nominalDeger;
+      existing._pulTipi = meta.pulTipi || existing._pulTipi;
+      existing._durum = meta.durum || existing._durum;
+      existing._katalogNo = code;
+      existing.webViewLink = `https://drive.google.com/file/d/${file.id}/view?usp=drivesdk`;
+      existing.modifiedTime = file.modifiedTime || new Date().toISOString();
+
+      renamed++;
+      console.log(`   ✓ ${file.name}: id updated ${oldId.substring(0,8)}...→${file.id.substring(0,8)}... [${code}]`);
+    } catch (err) {
+      console.error(`   ✗ ${file.name}: ${err.message}`);
+    }
+  }
+
+  // 5. Fetch and extract metadata for each truly new file
+  console.log('\n5. Fetching metadata from Drive for new files...');
   let added = 0;
-  for (const file of newFiles) {
+  for (const file of trulyNewFiles) {
     try {
       console.log(`   Fetching ${file.name}...`);
       const mediaUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${API_KEY}`;
@@ -207,8 +275,8 @@ async function main() {
     }
   }
 
-  // 5. Fetch and re-extract metadata for modified files
-  console.log('\n5. Fetching updated metadata for modified files...');
+  // 6. Fetch and re-extract metadata for modified files
+  console.log('\n6. Fetching updated metadata for modified files...');
   let updated = 0;
   for (const file of modifiedFiles) {
     try {
@@ -268,13 +336,13 @@ async function main() {
     }
   }
 
-  if (added === 0 && updated === 0) {
+  if (added === 0 && updated === 0 && renamed === 0) {
     console.log('\n   No changes.');
     return;
   }
 
-  // 6. Write back to collection_data.js
-  console.log(`\n6. Writing to collection_data.js (added: ${added}, updated: ${updated})...`);
+  // 7. Write back to collection_data.js
+  console.log(`\n7. Writing to collection_data.js (added: ${added}, updated: ${updated}, renamed: ${renamed})...`);
   const prefix = content.substring(0, eqIdx + 1); // "window.PULLUK_COLLECTION_DATA ="
   const newJson = JSON.stringify(data);
   const newContent = prefix + newJson + ';\n';
