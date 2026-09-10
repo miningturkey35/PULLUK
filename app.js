@@ -1827,7 +1827,7 @@ function extractLegoverseInfoFromHtml(html) {
 }
 
 const DB_NAME = 'PullukDB';
-const DB_VERSION = 12; // v12: fix MGP002 empty cache clobber & ACES HIGH fields
+const DB_VERSION = 13; // v13: clear cache after MG0050 Drive ID change
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const STORE_NAME = 'fileCache';
 
