@@ -2,6 +2,7 @@
 /**
  * sync_gallery.js — Fetches new HTML files from Google Drive galeri folder,
  * extracts metadata, and appends them to data/collection_data.js.
+ * Also updates existing entries whose HTML has been modified on Drive.
  *
  * Usage: node sync_gallery.js
  */
@@ -120,18 +121,38 @@ async function main() {
   const existingCodes = new Set(data.galeri.map(f => f._code).filter(Boolean));
   console.log(`   Current gallery entries: ${data.galeri.length}\n`);
 
-  // 3. Find new files
+  // 3. Find new files and modified files
   const newFiles = driveFiles.filter(f => !existingIds.has(f.id));
-  console.log(`3. New files to add: ${newFiles.length}`);
-  if (newFiles.length === 0) {
+
+  // Build a map of existing entries by id for quick lookup
+  const existingMap = new Map(data.galeri.map(f => [f.id, f]));
+
+  // Find modified files: existing entries whose modifiedTime is older than Drive's
+  const modifiedFiles = [];
+  for (const driveFile of driveFiles) {
+    const existing = existingMap.get(driveFile.id);
+    if (existing && driveFile.modifiedTime && existing.modifiedTime && driveFile.modifiedTime > existing.modifiedTime) {
+      modifiedFiles.push(driveFile);
+    }
+  }
+
+  console.log(`3. New files: ${newFiles.length}, Modified files: ${modifiedFiles.length}`);
+  if (newFiles.length === 0 && modifiedFiles.length === 0) {
     console.log('   Nothing to do!');
     return;
   }
-  newFiles.forEach(f => console.log(`   - ${f.name} (${f.id})`));
+  if (newFiles.length > 0) {
+    console.log('   New:');
+    newFiles.forEach(f => console.log(`     - ${f.name} (${f.id})`));
+  }
+  if (modifiedFiles.length > 0) {
+    console.log('   Modified:');
+    modifiedFiles.forEach(f => console.log(`     - ${f.name} (${f.id})`));
+  }
   console.log('');
 
   // 4. Fetch and extract metadata for each new file
-  console.log('4. Fetching metadata from Drive...');
+  console.log('4. Fetching metadata from Drive for new files...');
   let added = 0;
   for (const file of newFiles) {
     try {
@@ -186,13 +207,74 @@ async function main() {
     }
   }
 
-  if (added === 0) {
-    console.log('\n   No new entries added.');
+  // 5. Fetch and re-extract metadata for modified files
+  console.log('\n5. Fetching updated metadata for modified files...');
+  let updated = 0;
+  for (const file of modifiedFiles) {
+    try {
+      console.log(`   Fetching ${file.name}...`);
+      const mediaUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${API_KEY}`;
+      const mediaRes = await fetchUrl(mediaUrl);
+      if (mediaRes.status !== 200) {
+        console.log(`   ⚠ ${file.name}: HTTP ${mediaRes.status} — skipping`);
+        continue;
+      }
+      const html = mediaRes.body;
+      const meta = extractMetadata(html);
+
+      const existing = existingMap.get(file.id);
+      let changed = false;
+
+      // Update fields if extracted value differs and is non-empty
+      const updates = {
+        _title: stripPatterns(meta.title),
+        _subtitle: stripPatterns(meta.subtitle),
+        _image: meta.image,
+        _country: meta.country,
+        _year: meta.year,
+        _nominalDeger: meta.nominalDeger,
+        _pulTipi: meta.pulTipi,
+        _durum: meta.durum,
+        _katalogNo: meta.code || existing._katalogNo,
+      };
+
+      for (const [key, val] of Object.entries(updates)) {
+        if (val && val !== existing[key]) {
+          existing[key] = val;
+          changed = true;
+        }
+      }
+
+      // Always update modifiedTime
+      if (file.modifiedTime && file.modifiedTime !== existing.modifiedTime) {
+        existing.modifiedTime = file.modifiedTime;
+        changed = true;
+      }
+
+      // Update name if changed
+      if (file.name && file.name !== existing.name) {
+        existing.name = file.name;
+        changed = true;
+      }
+
+      if (changed) {
+        updated++;
+        console.log(`   ✓ ${file.name}: updated [${existing._code}]`);
+      } else {
+        console.log(`   — ${file.name}: no changes [${existing._code}]`);
+      }
+    } catch (err) {
+      console.error(`   ✗ ${file.name}: ${err.message}`);
+    }
+  }
+
+  if (added === 0 && updated === 0) {
+    console.log('\n   No changes.');
     return;
   }
 
-  // 5. Write back to collection_data.js
-  console.log(`\n5. Writing ${added} new entries to collection_data.js...`);
+  // 6. Write back to collection_data.js
+  console.log(`\n6. Writing to collection_data.js (added: ${added}, updated: ${updated})...`);
   const prefix = content.substring(0, eqIdx + 1); // "window.PULLUK_COLLECTION_DATA ="
   const newJson = JSON.stringify(data);
   const newContent = prefix + newJson + ';\n';
