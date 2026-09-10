@@ -956,7 +956,7 @@ html[data-theme="dark"] .plak-card:hover {
 
 .plak-card-info {
   grid-template-columns: 1fr 1fr !important;
-  gap: 4px 14px !important;
+  gap: 2px 12px !important;
 }
 
 /* Album title and Koleksiyon No side by side */
@@ -1002,12 +1002,11 @@ html[data-theme="dark"] .plak-card .pdf-card-field__value {
   color: #F1F4F9;
 }
 
-/* Exception for format badge which should stay mono */
+/* Exception for format badge — no uppercase, keep mono style */
 .plak-field-format .pdf-card-field__value {
   font-family: var(--font-mono);
   font-size: .6rem;
   letter-spacing: .06em;
-  text-transform: uppercase;
   background: var(--gold-light);
   color: var(--gold);
   padding: 1px 6px;
@@ -1028,6 +1027,10 @@ html[data-theme="dark"] .plak-field-format .pdf-card-field__value {
 /* Plak card labels: consistent color, artist = gold */
 .plak-card .pdf-card-field__label {
   color: var(--ink-faint);
+  font-size: .42rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 html[data-theme="dark"] .plak-card .pdf-card-field__label {
   color: rgba(255,255,255,.4);

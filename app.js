@@ -3185,7 +3185,7 @@ class GalleryManager {
       <div class="pdf-card-main">
         <div class="pdf-card-info plak-card-info">
           <div class="pdf-card-field plak-field-title">
-            <span class="pdf-card-field__label">Albüm / Plak</span>
+            <span class="pdf-card-field__label">Albüm</span>
             <span class="pdf-card-field__value pdf-card-title-value">${albumName || initialTitle || '—'}</span>
           </div>
           <div class="pdf-card-field plak-field-artist">
@@ -3193,7 +3193,7 @@ class GalleryManager {
             <span class="pdf-card-field__value">${artist || '—'}</span>
           </div>
           <div class="pdf-card-field plak-field-label">
-            <span class="pdf-card-field__label">Plak Şirketi</span>
+            <span class="pdf-card-field__label">Şirket</span>
             <span class="pdf-card-field__value">${plakSirketi || '—'}</span>
           </div>
           <div class="pdf-card-field plak-field-genre">
@@ -3201,7 +3201,7 @@ class GalleryManager {
             <span class="pdf-card-field__value">${genre || '—'}</span>
           </div>
           <div class="pdf-card-field plak-field-katalog">
-            <span class="pdf-card-field__label">Katalog No</span>
+            <span class="pdf-card-field__label">Katalog</span>
             <span class="pdf-card-field__value">${katalogNo || '—'}</span>
           </div>
           <div class="pdf-card-field plak-field-year">
@@ -3213,7 +3213,7 @@ class GalleryManager {
             <span class="pdf-card-field__value">${pressing || '—'}</span>
           </div>
           <div class="pdf-card-field plak-field-collection">
-            <span class="pdf-card-field__label">Koleksiyon No</span>
+            <span class="pdf-card-field__label">Koleksiyon</span>
             <span class="pdf-card-field__value">${fileNameNoExt || '—'}</span>
           </div>
           <div class="pdf-card-field plak-field-format plak-field-format--full">
