@@ -933,7 +933,6 @@ html[data-theme="dark"] footer {
 /* ─── Plak (Vinyl) Card ─── */
 .plak-card {
   border-left: 3px solid var(--gold);
-  min-width: 520px;
 }
 .plak-card:hover {
   border-color: var(--gold);
@@ -1056,7 +1055,6 @@ html[data-theme="dark"] .plak-field-artist .pdf-card-field__label {
 /* ─── Legoverse (LEGO) Card ─── */
 .legoverse-card {
   border-left: 3px solid #e3000b;
-  min-width: 520px;
 }
 .legoverse-card:hover {
   border-color: var(--gold);
