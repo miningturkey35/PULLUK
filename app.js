@@ -2082,6 +2082,26 @@ async function processPreviewQueue() {
           if (basData.ozet && !file._ozet) file._ozet = basData.ozet;
           saveFileToCache(file);
         }
+        // Allother-specific: always re-extract from html (refreshes label info)
+        if (gallery && gallery.id === 'allother' && file._htmlContent) {
+          const alloData = extractStampInfoFromHtml(file._htmlContent);
+          let changed = false;
+          if (alloData.country) {
+            const normalized = normalizeCountryName(alloData.country);
+            if (file._country !== normalized) { file._country = normalized; changed = true; }
+            if (file._ulke !== normalized) { file._ulke = normalized; changed = true; }
+          }
+          if (alloData.year) { if (!file._year) { file._year = alloData.year; changed = true; } }
+          if (alloData.basimYili) { if (!file._basimYili) { file._basimYili = alloData.basimYili; changed = true; } }
+          if (alloData.nominalDeger) { if (!file._nominalDeger) { file._nominalDeger = alloData.nominalDeger; changed = true; } }
+          if (alloData.pulTipi) { if (!file._pulTipi) { file._pulTipi = alloData.pulTipi; changed = true; } }
+          if (alloData.durum) { if (!file._durum) { file._durum = alloData.durum; changed = true; } }
+          if (alloData.code) { if (!file._code) { file._code = alloData.code; changed = true; } }
+          if (alloData.title) { if (!file._title) { file._title = alloData.title; changed = true; } }
+          if (alloData.subtitle) { if (!file._subtitle) { file._subtitle = alloData.subtitle; changed = true; } }
+          if (alloData.image) { if (!file._image) { file._image = alloData.image; changed = true; } }
+          if (changed) saveFileToCache(file);
+        }
         // İskambil-specific: extract from html
         if (gallery && gallery.id === 'iskambil' && file._htmlContent) {
           const iskData = extractIskambilInfoFromHtml(file._htmlContent);
@@ -2206,6 +2226,26 @@ async function processPreviewQueue() {
           if (basData.image) file._image = basData.image;
           if (basData.ozet && !file._ozet) file._ozet = basData.ozet;
           saveFileToCache(file);
+        }
+        // Allother-specific: always re-extract from cached html (refreshes label info)
+        if (gallery && gallery.id === 'allother' && file._htmlContent) {
+          const alloData = extractStampInfoFromHtml(file._htmlContent);
+          let changed = false;
+          if (alloData.country) {
+            const normalized = normalizeCountryName(alloData.country);
+            if (file._country !== normalized) { file._country = normalized; changed = true; }
+            if (file._ulke !== normalized) { file._ulke = normalized; changed = true; }
+          }
+          if (alloData.year) { if (!file._year) { file._year = alloData.year; changed = true; } }
+          if (alloData.basimYili) { if (!file._basimYili) { file._basimYili = alloData.basimYili; changed = true; } }
+          if (alloData.nominalDeger) { if (!file._nominalDeger) { file._nominalDeger = alloData.nominalDeger; changed = true; } }
+          if (alloData.pulTipi) { if (!file._pulTipi) { file._pulTipi = alloData.pulTipi; changed = true; } }
+          if (alloData.durum) { if (!file._durum) { file._durum = alloData.durum; changed = true; } }
+          if (alloData.code) { if (!file._code) { file._code = alloData.code; changed = true; } }
+          if (alloData.title) { if (!file._title) { file._title = alloData.title; changed = true; } }
+          if (alloData.subtitle) { if (!file._subtitle) { file._subtitle = alloData.subtitle; changed = true; } }
+          if (alloData.image) { if (!file._image) { file._image = alloData.image; changed = true; } }
+          if (changed) saveFileToCache(file);
         }
         // İskambil-specific: extract from cached html
         if (gallery && gallery.id === 'iskambil' && file._htmlContent) {
@@ -3108,7 +3148,8 @@ class GalleryManager {
     const tipiEl = card.querySelector('.card-tipi-el');
     const durumEl = card.querySelector('.card-durum-el');
 
-    const needsExtraction = isBasilsanat ? (!file._title || !file._image || !file._tur || !file._yazar) : (!file._title || !file._image);
+    const isAllother = (galleryId === 'allother');
+    const needsExtraction = isBasilsanat ? (!file._title || !file._image || !file._tur || !file._yazar) : isAllother ? (!file._title || !file._image || !file._htmlContent) : (!file._title || !file._image);
     if (!file.isMock && needsExtraction && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim()) {
         console.log(`[PULLUK] createPdfCard: pushing ${file.name} to previewQueue`);
