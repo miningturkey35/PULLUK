@@ -373,9 +373,10 @@ html[data-theme="dark"] .hero-badge {
   cursor: pointer; position: relative;
 }
 .collection-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+.collection-card:hover .card-stripe { height: 8px; }
 .collection-card.is-active { border-color: var(--azure); }
 
-.card-stripe { height: 5px; }
+.card-stripe { height: 5px; transition: height .3s ease; }
 .stripe-azure { background: linear-gradient(90deg, #1a5fb4, #3584e4 30%, #93b4f5 50%, #3584e4 70%, #1a5fb4); }
 .stripe-gold { background: linear-gradient(90deg, #b8860b, #daa520 30%, #ffd700 50%, #daa520 70%, #b8860b); }
 .stripe-coral { background: linear-gradient(90deg, #b5301a, #e5533b 30%, #ff9e8a 50%, #e5533b 70%, #b5301a); }
