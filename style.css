@@ -376,15 +376,15 @@ html[data-theme="dark"] .hero-badge {
 .collection-card.is-active { border-color: var(--azure); }
 
 .card-stripe { height: 5px; }
-.stripe-azure { background: linear-gradient(90deg, var(--azure), #5D83FF); }
-.stripe-gold { background: linear-gradient(90deg, var(--gold), #F5C469); }
-.stripe-coral { background: linear-gradient(90deg, var(--coral), #FF8571); }
-.stripe-purple { background: linear-gradient(90deg, #A855F7, #C084FC); }
-.stripe-green { background: linear-gradient(90deg, #22C55E, #4ADE80); }
-.stripe-emerald { background: linear-gradient(90deg, #10B981, #34D399); }
-.stripe-red { background: linear-gradient(90deg, #e3000b, #FF4D4D); }
-.stripe-kraft { background: linear-gradient(90deg, #A0522D, #CD853F); }
-.stripe-crimson { background: linear-gradient(90deg, #8B0000, #DC143C); }
+.stripe-azure { background: linear-gradient(90deg, #1a5fb4, #3584e4 30%, #93b4f5 50%, #3584e4 70%, #1a5fb4); }
+.stripe-gold { background: linear-gradient(90deg, #b8860b, #daa520 30%, #ffd700 50%, #daa520 70%, #b8860b); }
+.stripe-coral { background: linear-gradient(90deg, #b5301a, #e5533b 30%, #ff9e8a 50%, #e5533b 70%, #b5301a); }
+.stripe-purple { background: linear-gradient(90deg, #6b21a8, #9333ea 30%, #d8b4fe 50%, #9333ea 70%, #6b21a8); }
+.stripe-green { background: linear-gradient(90deg, #15803d, #22c55e 30%, #86efac 50%, #22c55e 70%, #15803d); }
+.stripe-emerald { background: linear-gradient(90deg, #047857, #10b981 30%, #6ee7b7 50%, #10b981 70%, #047857); }
+.stripe-red { background: linear-gradient(90deg, #991b1b, #dc2626 30%, #fca5a5 50%, #dc2626 70%, #991b1b); }
+.stripe-kraft { background: linear-gradient(90deg, #6b3a1f, #a0522d 30%, #deb887 50%, #a0522d 70%, #6b3a1f); }
+.stripe-crimson { background: linear-gradient(90deg, #5c0a0a, #8b0000 30%, #f08080 50%, #8b0000 70%, #5c0a0a); }
 
 .card-body { padding: 14px 18px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .card-icon { display: none; }
