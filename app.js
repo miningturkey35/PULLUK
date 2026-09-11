@@ -2793,6 +2793,9 @@ class GalleryManager {
         const cacheTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Cache timeout')), 3000));
         try { await Promise.race([cachePromise, cacheTimeout]); } catch (_e) { }
 
+        // Clear _htmlContent so files always re-fetch fresh HTML from Drive via previewQueue
+        this.allFiles.forEach(f => { f._htmlContent = null; });
+
         this.updateFilterButtonsDynamically();
         this.filteredFiles = [...this.allFiles];
         this.renderGallery();
