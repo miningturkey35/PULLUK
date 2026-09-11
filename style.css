@@ -753,7 +753,7 @@ html[data-theme="dark"] .collector-card {
 .collector-photos { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
 .collector-family-photos { display: flex; gap: 8px; }
 .collector-family-img {
-  width: 48px; height: 48px; border-radius: 50%;
+  width: 80px; height: 80px; border-radius: 50%;
   object-fit: cover; border: 2px solid var(--line);
   box-shadow: 0 2px 8px rgba(0,0,0,.1);
 }
