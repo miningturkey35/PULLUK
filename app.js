@@ -1987,8 +1987,8 @@ async function processPreviewQueue() {
       const apiKey = CONFIG.GOOGLE_API_KEY.trim();
       console.log(`[PULLUK] processPreviewQueue: processing ${file.name} — _title=${file._title}, _image=${file._image ? 'yes' : 'no'}, _code=${file._code}, _country=${file._country}`);
 
-      if (file._title) {
-        console.log(`[PULLUK] processPreviewQueue: ${file.name} HAS _title, using cached data`);
+      if (file._title && file._htmlContent) {
+        console.log(`[PULLUK] processPreviewQueue: ${file.name} HAS _title AND _htmlContent, using cached data`);
         // Re-extract and normalize missing/outdated fields from cached htmlContent
         if (file._htmlContent) {
           const reExtracted = extractStampInfoFromHtml(file._htmlContent);
