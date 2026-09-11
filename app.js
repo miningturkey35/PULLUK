@@ -2796,6 +2796,10 @@ class GalleryManager {
         // Clear _htmlContent so files always re-fetch fresh HTML from Drive via previewQueue
         this.allFiles.forEach(f => { f._htmlContent = null; });
 
+        // Clear previewQueue so only files with correct Drive IDs are processed
+        previewQueue.length = 0;
+        isPreviewProcessing = false;
+
         this.updateFilterButtonsDynamically();
         this.filteredFiles = [...this.allFiles];
         this.renderGallery();
