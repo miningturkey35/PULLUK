@@ -2783,6 +2783,12 @@ class GalleryManager {
           }
         });
 
+        // Rebuild allFiles from Drive files only — removes stale precompiled files no longer in Drive
+        this.allFiles = driveFiles.map(df => {
+          const baseName = (df.name || '').replace(/\.html?$/i, '').trim();
+          return fileMap.get(df.id) || (baseName ? nameMap.get(baseName) : null) || df;
+        });
+
         const cachePromise = Promise.all(this.allFiles.map(file => getFileFromCache(file)));
         const cacheTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Cache timeout')), 3000));
         try { await Promise.race([cachePromise, cacheTimeout]); } catch (_e) { }
