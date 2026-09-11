@@ -750,6 +750,17 @@ html[data-theme="dark"] .collector-card {
   object-fit: cover;
   margin-bottom: 20px; box-shadow: 0 0 0 4px rgba(61,99,255,.3);
 }
+.collector-photos { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.collector-family-photos { display: flex; gap: 8px; }
+.collector-family-img {
+  width: 48px; height: 48px; border-radius: 50%;
+  object-fit: cover; border: 2px solid var(--line);
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+}
+html[data-theme="dark"] .collector-family-img {
+  border-color: rgba(255,255,255,.15);
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+}
 .collector-name { font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; color: var(--ink); margin-bottom: 4px; }
 html[data-theme="dark"] .collector-name { color: var(--ink); }
 .collector-title { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--azure); margin-bottom: 20px; }
