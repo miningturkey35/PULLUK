@@ -1580,8 +1580,24 @@ function extractPlakInfoFromHtml(html) {
 
   artist = findKey('sanatçı', 'sanatci', 'artist', 'müzisyen', 'ses sanatçısı', 'group', 'grup', 'performer');
   album = findKey('albüm', 'album', 'plak adı', 'eser', 'konu', 'title', 'lp', 'ep');
-  plakSirketi = findKey('plak şirketi', 'plak sirketi', 'şirket', 'sirket', 'label', 'record label', 'yayın', 'yayinevi', 'firma', 'şirketi');
+  plakSirketi = findKey('plak şirketi', 'plak sirketi', 'şirket', 'sirket', 'label', 'record label', 'yayın', 'yayinevi', 'firma', 'şirketi', 'etiket');
   katalogNo = findKey('katalog', 'catalog', 'kat no', 'no', 'numara', 'katalog no', 'catalog no');
+
+  // ── 4b. PARSE "Etiket / Cat. No" combined field ──
+  // If plakSirketi contains " – " or " — " pattern, split label from catalog number
+  // e.g. "EMI – 509999 729521 1" → plakSirketi = "EMI", katalogNo = "509999 729521 1"
+  if (plakSirketi && /[–—-]/.test(plakSirketi)) {
+    const sepMatch = plakSirketi.match(/^(.+?)\s*[–—-]\s+(.+)$/);
+    if (sepMatch) {
+      const possibleLabel = sepMatch[1].trim();
+      const possibleCatNo = sepMatch[2].trim();
+      // Only split if the second part looks like a catalog number (contains digits)
+      if (/\d/.test(possibleCatNo)) {
+        plakSirketi = possibleLabel;
+        if (!katalogNo) katalogNo = possibleCatNo;
+      }
+    }
+  }
   year = findKey('yıl', 'yil', 'year', 'tarih', 'basım yılı', 'basim yili', 'yayın yılı', 'release year');
   format = findKey('format', 'tür', 'tur', 'tip', 'tipi', 'format:', 'plak formatı', 'çap', 'cap', 'rpm', 'devir', 'boyut');
   country = findKey('ülke', 'ulke', 'country', 'menşe', 'mense', 'menşei', 'origin', 'press country');
