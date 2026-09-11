@@ -1238,7 +1238,7 @@ function extractBasilsanatInfoFromHtml(html) {
   if (!title) title = getTableValue('başlık', 'baslik', 'title', 'eser adı', 'kitap adı');
   if (!tur) tur = getTableValue('tür', 'tur', 'kategori', 'category', 'type');
   yazar = getTableValue('yazar / çizer', 'yazar / cizer', 'yazar', 'author', 'çizer', 'cizer');
-  yayinevi = getTableValue('yayıncı', 'yayinevi', 'yayın evi', 'publisher', 'yayın', 'yayinci');
+  yayinevi = getTableValue('yayıncı', 'yayinevi', 'yayın evi', 'publisher', 'yayinci');
   dil = getTableValue('dil', 'language');
   basimYili = getTableValue('basım yılı', 'basim yili', 'yıl', 'yil', 'year');
   basimYeri = getTableValue('basım yeri', 'basim yeri', 'yer', 'place');
