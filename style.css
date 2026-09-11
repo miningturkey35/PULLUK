@@ -932,16 +932,12 @@ html[data-theme="dark"] footer {
 
 /* ─── Plak (Vinyl) Card ─── */
 .plak-card {
-  border-left: 3px solid var(--gold);
 }
 .plak-card:hover {
-  border-color: var(--gold);
 }
 html[data-theme="dark"] .plak-card {
-  border-left-color: var(--gold);
 }
 html[data-theme="dark"] .plak-card:hover {
-  border-color: var(--gold);
 }
 
 .plak-icon-frame {
@@ -993,16 +989,12 @@ html[data-theme="dark"] .plak-field-format .pdf-card-field__value {
 
 /* ─── Legoverse (LEGO) Card ─── */
 .legoverse-card {
-  border-left: 3px solid #e3000b;
 }
 .legoverse-card:hover {
-  border-color: var(--gold);
 }
 html[data-theme="dark"] .legoverse-card {
-  border-left-color: #e3000b;
 }
 html[data-theme="dark"] .legoverse-card:hover {
-  border-color: var(--gold);
 }
 
 .lego-icon-frame {

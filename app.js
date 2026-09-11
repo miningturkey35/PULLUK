@@ -1994,52 +1994,52 @@ async function processPreviewQueue() {
           if (!file._subtitle && reExtracted.subtitle) { file._subtitle = reExtracted.subtitle; changed = true; }
           if (changed) saveFileToCache(file);
         }
-        // Plak-specific: extract from html if not yet done
-        if (gallery && gallery.id === 'plak' && !file._artist && file._htmlContent) {
+        // Plak-specific: always re-extract from html when available (refreshes label/etiket info)
+        if (gallery && gallery.id === 'plak' && file._htmlContent) {
           const plakData = extractPlakInfoFromHtml(file._htmlContent);
-          file._artist = plakData.artist;
-          file._album = plakData.album;
-          file._plakSirketi = plakData.plakSirketi;
-          file._format = plakData.format;
-          file._genre = plakData.genre;
-          file._pressing = plakData.pressing;
-          file._matrixNo = plakData.matrixNo;
-          file._condition = plakData.condition;
+          if (plakData.artist) file._artist = plakData.artist;
+          if (plakData.album) file._album = plakData.album;
+          if (plakData.plakSirketi) file._plakSirketi = plakData.plakSirketi;
+          if (plakData.format) file._format = plakData.format;
+          if (plakData.genre) file._genre = plakData.genre;
+          if (plakData.pressing) file._pressing = plakData.pressing;
+          if (plakData.matrixNo) file._matrixNo = plakData.matrixNo;
+          if (plakData.condition) file._condition = plakData.condition;
           if (plakData.artist && !file._subtitle) file._subtitle = plakData.artist;
           if (plakData.album) file._title = plakData.album;
           if (plakData.katalogNo) file._katalogNo = plakData.katalogNo;
           if (plakData.year) file._year = plakData.year;
           saveFileToCache(file);
         }
-        // Diecast-specific: extract from html if not yet done
-        if (gallery && gallery.id === 'diecast' && (!file._brand || !file._scale) && file._htmlContent) {
+        // Diecast-specific: always re-extract from html when available (refreshes label info)
+        if (gallery && gallery.id === 'diecast' && file._htmlContent) {
           const diecastData = parseDiecastInfo(file, file._htmlContent);
-          file._brand = diecastData.brand;
-          file._model = diecastData.model;
-          file._scale = diecastData.scale;
-          file._year = diecastData.year;
-          file._origin = diecastData.origin;
-          file._series = diecastData.series;
-          file._material = diecastData.material;
+          if (diecastData.brand) file._brand = diecastData.brand;
+          if (diecastData.model) file._model = diecastData.model;
+          if (diecastData.scale) file._scale = diecastData.scale;
+          if (diecastData.year) file._year = diecastData.year;
+          if (diecastData.origin) file._origin = diecastData.origin;
+          if (diecastData.series) file._series = diecastData.series;
+          if (diecastData.material) file._material = diecastData.material;
           if (diecastData.code) file._code = diecastData.code;
           if (diecastData.model) file._title = diecastData.model;
           saveFileToCache(file);
         }
-        // Legoverse-specific: extract from html if not yet done
-        if (gallery && gallery.id === 'legoverse' && !file._setNo && file._htmlContent) {
+        // Legoverse-specific: always re-extract from html when available (refreshes label info)
+        if (gallery && gallery.id === 'legoverse' && file._htmlContent) {
           const legoData = extractLegoverseInfoFromHtml(file._htmlContent);
-          file._setNo = legoData.setNo;
-          file._setName = legoData.setName;
-          file._theme = legoData.theme;
-          file._subTheme = legoData.subTheme;
-          file._pieceCount = legoData.pieceCount;
-          file._minifigCount = legoData.minifigCount;
-          file._rarity = legoData.rarity;
-          file._setStatus = legoData.setStatus;
-          file._rrp = legoData.rrp;
-          file._estValue = legoData.estValue;
-          file._rareMinifigs = legoData.rareMinifigs;
-          file._rarePieces = legoData.rarePieces;
+          if (legoData.setNo) file._setNo = legoData.setNo;
+          if (legoData.setName) file._setName = legoData.setName;
+          if (legoData.theme) file._theme = legoData.theme;
+          if (legoData.subTheme) file._subTheme = legoData.subTheme;
+          if (legoData.pieceCount) file._pieceCount = legoData.pieceCount;
+          if (legoData.minifigCount) file._minifigCount = legoData.minifigCount;
+          if (legoData.rarity) file._rarity = legoData.rarity;
+          if (legoData.setStatus) file._setStatus = legoData.setStatus;
+          if (legoData.rrp) file._rrp = legoData.rrp;
+          if (legoData.estValue) file._estValue = legoData.estValue;
+          if (legoData.rareMinifigs) file._rareMinifigs = legoData.rareMinifigs;
+          if (legoData.rarePieces) file._rarePieces = legoData.rarePieces;
           if (legoData.setName) file._title = legoData.setName;
           if (legoData.theme) file._subtitle = legoData.subTheme ? `${legoData.theme} — ${legoData.subTheme}` : legoData.theme;
           saveFileToCache(file);
@@ -2117,54 +2117,54 @@ async function processPreviewQueue() {
           const t = extractStampInfoFromHtml(file._htmlContent);
           if (t.title) file._title = t.title;
         }
-        // Plak-specific: extract from cached html if not yet done
-        if (gallery && gallery.id === 'plak' && !file._artist && file._htmlContent) {
+        // Plak-specific: always re-extract from cached html (refreshes label/etiket info)
+        if (gallery && gallery.id === 'plak' && file._htmlContent) {
           const plakData = extractPlakInfoFromHtml(file._htmlContent);
-          file._artist = plakData.artist;
-          file._album = plakData.album;
-          file._plakSirketi = plakData.plakSirketi;
-          file._format = plakData.format;
-          file._genre = plakData.genre;
-          file._pressing = plakData.pressing;
-          file._matrixNo = plakData.matrixNo;
-          file._condition = plakData.condition;
+          if (plakData.artist) file._artist = plakData.artist;
+          if (plakData.album) file._album = plakData.album;
+          if (plakData.plakSirketi) file._plakSirketi = plakData.plakSirketi;
+          if (plakData.format) file._format = plakData.format;
+          if (plakData.genre) file._genre = plakData.genre;
+          if (plakData.pressing) file._pressing = plakData.pressing;
+          if (plakData.matrixNo) file._matrixNo = plakData.matrixNo;
+          if (plakData.condition) file._condition = plakData.condition;
           if (plakData.artist && !file._subtitle) file._subtitle = plakData.artist;
           if (plakData.album) file._title = plakData.album;
           if (plakData.katalogNo) file._katalogNo = plakData.katalogNo;
           if (plakData.year) file._year = plakData.year;
           saveFileToCache(file);
         }
-        // Diecast-specific: extract from cached html if not yet done
-        if (gallery && gallery.id === 'diecast' && (!file._brand || !file._scale) && file._htmlContent) {
+        // Diecast-specific: always re-extract from cached html (refreshes label info)
+        if (gallery && gallery.id === 'diecast' && file._htmlContent) {
           const diecastData = parseDiecastInfo(file, file._htmlContent);
-          file._brand = diecastData.brand;
-          file._model = diecastData.model;
-          file._scale = diecastData.scale;
-          file._year = diecastData.year;
-          file._origin = diecastData.origin;
-          file._series = diecastData.series;
-          file._material = diecastData.material;
-          file._modelYear = diecastData.modelYear;
-          file._productionYear = diecastData.productionYear;
+          if (diecastData.brand) file._brand = diecastData.brand;
+          if (diecastData.model) file._model = diecastData.model;
+          if (diecastData.scale) file._scale = diecastData.scale;
+          if (diecastData.year) file._year = diecastData.year;
+          if (diecastData.origin) file._origin = diecastData.origin;
+          if (diecastData.series) file._series = diecastData.series;
+          if (diecastData.material) file._material = diecastData.material;
+          if (diecastData.modelYear) file._modelYear = diecastData.modelYear;
+          if (diecastData.productionYear) file._productionYear = diecastData.productionYear;
           if (diecastData.code) file._code = diecastData.code;
           if (diecastData.model) file._title = diecastData.model;
           saveFileToCache(file);
         }
-        // Legoverse-specific: extract from cached html if not yet done
-        if (gallery && gallery.id === 'legoverse' && !file._setNo && file._htmlContent) {
+        // Legoverse-specific: always re-extract from cached html (refreshes label info)
+        if (gallery && gallery.id === 'legoverse' && file._htmlContent) {
           const legoData = extractLegoverseInfoFromHtml(file._htmlContent);
-          file._setNo = legoData.setNo;
-          file._setName = legoData.setName;
-          file._theme = legoData.theme;
-          file._subTheme = legoData.subTheme;
-          file._pieceCount = legoData.pieceCount;
-          file._minifigCount = legoData.minifigCount;
-          file._rarity = legoData.rarity;
-          file._setStatus = legoData.setStatus;
-          file._rrp = legoData.rrp;
-          file._estValue = legoData.estValue;
-          file._rareMinifigs = legoData.rareMinifigs;
-          file._rarePieces = legoData.rarePieces;
+          if (legoData.setNo) file._setNo = legoData.setNo;
+          if (legoData.setName) file._setName = legoData.setName;
+          if (legoData.theme) file._theme = legoData.theme;
+          if (legoData.subTheme) file._subTheme = legoData.subTheme;
+          if (legoData.pieceCount) file._pieceCount = legoData.pieceCount;
+          if (legoData.minifigCount) file._minifigCount = legoData.minifigCount;
+          if (legoData.rarity) file._rarity = legoData.rarity;
+          if (legoData.setStatus) file._setStatus = legoData.setStatus;
+          if (legoData.rrp) file._rrp = legoData.rrp;
+          if (legoData.estValue) file._estValue = legoData.estValue;
+          if (legoData.rareMinifigs) file._rareMinifigs = legoData.rareMinifigs;
+          if (legoData.rarePieces) file._rarePieces = legoData.rarePieces;
           if (legoData.setName) file._title = legoData.setName;
           if (legoData.theme) file._subtitle = legoData.subTheme ? `${legoData.theme} — ${legoData.subTheme}` : legoData.theme;
           saveFileToCache(file);
