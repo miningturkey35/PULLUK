@@ -748,7 +748,7 @@ html[data-theme="dark"] .collector-card {
 .collector-avatar {
   width: 80px; height: 80px; border-radius: 50%;
   object-fit: cover;
-  margin-bottom: 20px; box-shadow: 0 0 0 4px rgba(61,99,255,.3);
+  box-shadow: 0 0 0 4px rgba(61,99,255,.3);
 }
 .collector-photos { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
 .collector-family-photos { display: flex; gap: 8px; }
