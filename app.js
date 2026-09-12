@@ -4114,12 +4114,12 @@ async function init() {
 
   const galleries = [
     new GalleryManager('galeri', CONFIG.FOLDERS['galeri']),
-    new GalleryManager('diecast', CONFIG.FOLDERS['diecast']),
-    new GalleryManager('plak', CONFIG.FOLDERS['plak']),
-    new GalleryManager('banknot', CONFIG.FOLDERS['banknot']),
-    new GalleryManager('legoverse', CONFIG.FOLDERS['legoverse']),
     new GalleryManager('basilsanat', CONFIG.FOLDERS['basilsanat']),
+    new GalleryManager('plak', CONFIG.FOLDERS['plak']),
+    new GalleryManager('diecast', CONFIG.FOLDERS['diecast']),
     new GalleryManager('iskambil', CONFIG.FOLDERS['iskambil']),
+    new GalleryManager('legoverse', CONFIG.FOLDERS['legoverse']),
+    new GalleryManager('banknot', CONFIG.FOLDERS['banknot']),
     new GalleryManager('allother', CONFIG.FOLDERS['allother'])
   ];
 
