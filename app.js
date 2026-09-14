@@ -3849,6 +3849,22 @@ function initViewer() {
       return;
     }
 
+    const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      const blob = new Blob([currentFileHtml], { type: 'text/html; charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const title = document.getElementById('viewerTitle').textContent || 'pulluk';
+      a.download = title.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ\s-]/g, '').trim().replace(/\s+/g, '_') + '.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      return;
+    }
+
     const printCSS = `
       <style id="pulluk-print">
         @page { margin: 0; size: auto; }
