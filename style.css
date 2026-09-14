@@ -940,8 +940,8 @@ html[data-theme="dark"] footer {
   .pdf-meta { font-size: .7rem; }
   .pdf-open-btn { width: 28px; height: 28px; }
   .plak-card { min-width: auto; }
-  .pagination-container { gap: 6px; margin-top: 24px; }
-  .page-btn { width: 32px; height: 32px; font-size: 0.85rem; }
+  .pagination-container { gap: 6px; margin-top: 24px; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; justify-content: flex-start; }
+  .page-btn { width: 32px; height: 32px; font-size: 0.85rem; flex-shrink: 0; }
 }
 
 /* ─── Plak (Vinyl) Card ─── */
