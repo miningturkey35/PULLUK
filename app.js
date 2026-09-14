@@ -3665,6 +3665,7 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
   modal.hidden = false;
   document.body.style.overflow = 'hidden';
   viewerOpen = true;
+  history.pushState({ viewerOpen: true }, '', '');
 
   let content = cachedFile && cachedFile._htmlContent;
   let loaded = false;
@@ -3808,6 +3809,11 @@ function initViewer() {
   document.getElementById('viewerBackdrop').addEventListener('click', closeViewer);
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && viewerOpen) closeViewer();
+  });
+
+  // Mobilde geri tuşuna basıldığında HTML penceresini kapat
+  window.addEventListener('popstate', () => {
+    if (viewerOpen) closeViewer();
   });
 
   document.getElementById('viewerSaveBtn').addEventListener('click', () => {
