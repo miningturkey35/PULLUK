@@ -596,31 +596,46 @@ async function fetchDriveFiles(folderId, noticeEl, type) {
   let allFiles = [];
   let pageToken = null;
 
-  do {
-    const params = new URLSearchParams({
-      q: `'${folderId}' in parents and trashed=false`,
-      fields: 'nextPageToken, files(id, name, mimeType, webViewLink, modifiedTime, size, description)',
-      pageSize: 1000,
-      key: apiKey,
-      orderBy: 'name',
-    });
-    if (pageToken) params.set('pageToken', pageToken);
+  try {
+    do {
+      const params = new URLSearchParams({
+        q: `'${folderId}' in parents and trashed=false`,
+        fields: 'nextPageToken, files(id, name, mimeType, webViewLink, modifiedTime, size, description)',
+        pageSize: 1000,
+        key: apiKey,
+        orderBy: 'name',
+      });
+      if (pageToken) params.set('pageToken', pageToken);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 20000);
-    let res;
-    try {
-      res = await fetch(`${baseUrl}?${params}`, { signal: controller.signal });
-    } finally {
-      clearTimeout(timeoutId);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      let res;
+      try {
+        res = await fetch(`${baseUrl}?${params}`, { signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      console.log(`[PULLUK] fetchDriveFiles: response ${res.status} for ${type}`);
+      if (!res.ok) throw new Error(`Drive API error: ${res.status} ${res.statusText}`);
+      const data = await res.json();
+
+      allFiles = allFiles.concat(data.files || []);
+      pageToken = data.nextPageToken || null;
+    } while (pageToken);
+  } catch (err) {
+    console.error(`[PULLUK] fetchDriveFiles failed for ${type}:`, err);
+    if (noticeEl) {
+      noticeEl.classList.remove('is-hidden');
+      noticeEl.innerHTML = `
+        <span class="api-notice-icon" aria-hidden="true">⚠️</span>
+        <div class="api-notice-text">
+          <b>Bağlantı Hatası</b>
+          Google Drive'a erişilemedi. Çevrimdışı veriler gösteriliyor.
+        </div>
+      `;
     }
-    console.log(`[PULLUK] fetchDriveFiles: response ${res.status} for ${type}`);
-    if (!res.ok) throw new Error(`Drive API error: ${res.status} ${res.statusText}`);
-    const data = await res.json();
-
-    allFiles = allFiles.concat(data.files || []);
-    pageToken = data.nextPageToken || null;
-  } while (pageToken);
+    return null;
+  }
 
   console.log(`[PULLUK] fetchDriveFiles: total ${allFiles.length} files for ${type}`);
   return allFiles;
@@ -2742,7 +2757,14 @@ class GalleryManager {
 
     try {
       const driveFiles = await fetchDriveFiles(this.folderId, hasPrecompiled ? null : this.els.notice, this.id);
-      if (driveFiles && driveFiles.length > 0) {
+      if (driveFiles === null) {
+        driveApiFailed = true;
+        if (!hasPrecompiled) {
+          this.allFiles = generateMockFiles(this.id);
+          this.filteredFiles = [...this.allFiles];
+          this.renderGallery();
+        }
+      } else if (driveFiles && driveFiles.length > 0) {
         console.log(`[PULLUK] load() fetched ${driveFiles.length} files from Drive for ${this.id}`);
         const fileMap = new Map();
         const nameMap = new Map();
@@ -2820,6 +2842,11 @@ class GalleryManager {
       if (hasPrecompiled && this.els.notice && driveApiFailed) {
         this.els.notice.classList.remove('is-hidden');
         this.els.notice.querySelector('.api-notice-text').innerHTML = `<b>⚠️ Güncellenemedi</b> Google Drive'dan güncel veri alınamadı. Yeni eklenen parçalar görünmeyebilir.`;
+      }
+      if (!hasPrecompiled && this.allFiles.length === 0) {
+        this.allFiles = generateMockFiles(this.id);
+        this.filteredFiles = [...this.allFiles];
+        this.renderGallery();
       }
     }
   }
