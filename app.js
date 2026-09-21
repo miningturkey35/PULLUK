@@ -2107,7 +2107,7 @@ async function processPreviewQueue() {
           if (!file._basimYeri && reExtracted.basimYeri) { file._basimYeri = reExtracted.basimYeri; changed = true; }
           if (!file._year && reExtracted.year) { file._year = reExtracted.year; changed = true; }
           if (!file._nominalDeger && reExtracted.nominalDeger) { file._nominalDeger = reExtracted.nominalDeger; changed = true; }
-          if (!file._pulTipi && reExtracted.pulTipi) { file._pulTipi = reExtracted.pulTipi; changed = true; }
+          if (reExtracted.pulTipi && file._pulTipi !== reExtracted.pulTipi) { file._pulTipi = reExtracted.pulTipi; changed = true; }
           if (!file._durum && reExtracted.durum) { file._durum = reExtracted.durum; changed = true; }
           if (!file._image && reExtracted.image) { file._image = reExtracted.image; changed = true; }
           if (!file._code && reExtracted.code) { file._code = reExtracted.code; changed = true; }
@@ -2199,7 +2199,7 @@ async function processPreviewQueue() {
           if (alloData.year) { if (!file._year) { file._year = alloData.year; changed = true; } }
           if (alloData.basimYili) { if (!file._basimYili) { file._basimYili = alloData.basimYili; changed = true; } }
           if (alloData.nominalDeger) { if (!file._nominalDeger) { file._nominalDeger = alloData.nominalDeger; changed = true; } }
-          if (alloData.pulTipi) { if (!file._pulTipi) { file._pulTipi = alloData.pulTipi; changed = true; } }
+          if (alloData.pulTipi) { if (file._pulTipi !== alloData.pulTipi) { file._pulTipi = alloData.pulTipi; changed = true; } }
           if (alloData.durum) { if (!file._durum) { file._durum = alloData.durum; changed = true; } }
           if (alloData.code) { if (!file._code) { file._code = alloData.code; changed = true; } }
           if (alloData.title) { if (!file._title) { file._title = alloData.title; changed = true; } }
@@ -2245,7 +2245,7 @@ async function processPreviewQueue() {
           if (!file._basimYeri && reExtracted.basimYeri) { file._basimYeri = reExtracted.basimYeri; changed = true; }
           if (!file._year && reExtracted.year) { file._year = reExtracted.year; changed = true; }
           if (!file._nominalDeger && reExtracted.nominalDeger) { file._nominalDeger = reExtracted.nominalDeger; changed = true; }
-          if (!file._pulTipi && reExtracted.pulTipi) { file._pulTipi = reExtracted.pulTipi; changed = true; }
+          if (reExtracted.pulTipi && file._pulTipi !== reExtracted.pulTipi) { file._pulTipi = reExtracted.pulTipi; changed = true; }
           if (!file._durum && reExtracted.durum) { file._durum = reExtracted.durum; changed = true; }
           if (!file._image && reExtracted.image) { file._image = reExtracted.image; changed = true; }
           if (!file._code && reExtracted.code) { file._code = reExtracted.code; changed = true; }
@@ -2344,7 +2344,7 @@ async function processPreviewQueue() {
           if (alloData.year) { if (!file._year) { file._year = alloData.year; changed = true; } }
           if (alloData.basimYili) { if (!file._basimYili) { file._basimYili = alloData.basimYili; changed = true; } }
           if (alloData.nominalDeger) { if (!file._nominalDeger) { file._nominalDeger = alloData.nominalDeger; changed = true; } }
-          if (alloData.pulTipi) { if (!file._pulTipi) { file._pulTipi = alloData.pulTipi; changed = true; } }
+          if (alloData.pulTipi) { if (file._pulTipi !== alloData.pulTipi) { file._pulTipi = alloData.pulTipi; changed = true; } }
           if (alloData.durum) { if (!file._durum) { file._durum = alloData.durum; changed = true; } }
           if (alloData.code) { if (!file._code) { file._code = alloData.code; changed = true; } }
           if (alloData.title) { if (!file._title) { file._title = alloData.title; changed = true; } }
