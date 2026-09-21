@@ -7,6 +7,7 @@
  *   node rebuild_gallery.js              → gallery-only rebuild (default)
  *   node rebuild_gallery.js --all        → rebuild ALL sections
  *   node rebuild_gallery.js --section X  → rebuild only section X
+ *   node rebuild_gallery.js --incremental → only re-fetch changed files (faster)
  *
  * Sections: galeri, diecast, plak, banknot, allother, legoverse, basilsanat, iskambil
  */
@@ -1482,14 +1483,14 @@ function getBuilder(section) {
   }
 }
 
-async function rebuildSection(section, existingData) {
+async function rebuildSection(section, existingData, incremental = false) {
   const folderId = FOLDERS[section];
   if (!folderId) {
     console.error(`Unknown section: ${section}`);
     return null;
   }
 
-  console.log(`\n═══ Rebuilding "${section}" ═══`);
+  console.log(`\n═══ Rebuilding "${section}" ${incremental ? '(incremental)' : ''} ═══`);
 
   // 1. List all HTML files from Drive
   console.log(`1. Listing Drive files for "${section}"...`);
@@ -1501,17 +1502,37 @@ async function rebuildSection(section, existingData) {
     return existingData[section] || [];
   }
 
-  // 2. Download and extract metadata for each file
+  // 2. Build map of existing entries by name for incremental mode
+  const existingMap = {};
+  if (incremental && existingData[section]) {
+    for (const entry of existingData[section]) {
+      existingMap[entry.name] = entry;
+    }
+  }
+
+  // 3. Download and extract metadata for each file
   const extract = getExtractor(section);
   const build = getBuilder(section);
   const entries = [];
   let successCount = 0;
   let errorCount = 0;
+  let skippedCount = 0;
 
   console.log(`2. Fetching and parsing HTML files...`);
   for (let i = 0; i < driveFiles.length; i++) {
     const file = driveFiles[i];
     const progress = `(${i + 1}/${driveFiles.length})`;
+
+    // Incremental: skip if file hasn't changed
+    if (incremental && existingMap[file.name]) {
+      const existing = existingMap[file.name];
+      if (existing.modifiedTime && existing.modifiedTime >= file.modifiedTime) {
+        entries.push(existing);
+        skippedCount++;
+        process.stdout.write(`   Skipping ${file.name} ${progress} (unchanged)\n`);
+        continue;
+      }
+    }
 
     try {
       process.stdout.write(`   Fetching ${file.name} ${progress}...`);
@@ -1542,10 +1563,11 @@ async function rebuildSection(section, existingData) {
     }
   }
 
-  // 3. Sort entries by name
+  // 4. Sort entries by name
   entries.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
 
-  console.log(`\n   Done: ${successCount} parsed, ${errorCount} errors, ${entries.length} total entries.`);
+  const skippedMsg = skippedCount > 0 ? `, ${skippedCount} skipped (unchanged)` : '';
+  console.log(`\n   Done: ${successCount} fetched, ${errorCount} errors, ${skippedMsg} ${entries.length} total entries.`);
 
   return entries;
 }
@@ -1555,6 +1577,7 @@ async function rebuildSection(section, existingData) {
 async function main() {
   const args = process.argv.slice(2);
   const isAll = args.includes('--all');
+  const isIncremental = args.includes('--incremental');
   const sectionIdx = args.indexOf('--section');
   const specificSection = sectionIdx !== -1 ? args[sectionIdx + 1] : null;
 
@@ -1575,6 +1598,7 @@ async function main() {
   console.log('║   PULLUK Collection Data Rebuilder       ║');
   console.log('╚══════════════════════════════════════════╝');
   console.log(`Sections to rebuild: ${sectionsToRebuild.join(', ')}`);
+  if (isIncremental) console.log(`Mode: incremental (only changed files)`);
   console.log('');
 
   // 1. Read existing data to preserve non-rebuilt sections
@@ -1596,7 +1620,7 @@ async function main() {
 
   // 2. Rebuild each section
   for (const section of sectionsToRebuild) {
-    const entries = await rebuildSection(section, data);
+    const entries = await rebuildSection(section, data, isIncremental);
     if (entries) {
       data[section] = entries;
     }
@@ -1612,12 +1636,23 @@ async function main() {
   const prefix = '/* PULLUK Precompiled Collection Data */\nwindow.PULLUK_COLLECTION_DATA =';
   const jsonStr = JSON.stringify(data);
   const newContent = prefix + jsonStr + ';\n';
+
+  // Check if content actually changed
+  let oldContent = '';
+  try { oldContent = fs.readFileSync(DATA_FILE, 'utf8'); } catch (_) {}
+  const hasChanges = oldContent !== newContent;
+
   fs.writeFileSync(DATA_FILE, newContent, 'utf8');
 
   const totalEntries = Object.values(data).reduce((sum, arr) => sum + (arr || []).length, 0);
   console.log(`   Written ${totalEntries} total entries across ${Object.keys(data).length} sections.`);
   console.log(`   Sections: ${Object.keys(data).map(k => `${k}(${(data[k] || []).length})`).join(', ')}`);
-  console.log('\nDone! Run "git add data/collection_data.js && git commit && git push" to deploy.\n');
+
+  if (hasChanges) {
+    console.log('\nChanges detected. Commit and push to deploy.\n');
+  } else {
+    console.log('\nNo changes detected. Data is up to date.\n');
+  }
 }
 
 main().catch(err => {

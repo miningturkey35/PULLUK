@@ -1,0 +1,43 @@
+name: Sync Drive to Collection Data
+
+on:
+  schedule:
+    # Günde 4 kez: 03:00, 09:00, 15:00, 21:00 UTC
+    - cron: '0 3,9,15,21 * * *'
+  workflow_dispatch: # Manuel tetikleme
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run incremental rebuild
+        run: node rebuild_gallery.js --incremental
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet data/collection_data.js; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit and push
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/collection_data.js
+          git commit -m "Auto-sync: Drive HTML → collection_data.js"
+          git push
