@@ -2237,7 +2237,7 @@ async function processPreviewQueue() {
         return;
       }
 
-      if (!file._title && await getFileFromCache(file)) {
+      if ((!file._title || !file._htmlContent) && await getFileFromCache(file)) {
         console.log(`[PULLUK] processPreviewQueue: ${file.name} found in cache, _htmlContent=${file._htmlContent ? 'yes (' + file._htmlContent.length + ' chars)' : 'NO'}`);
         try {
         // Re-extract and normalize fields from cached htmlContent
@@ -3466,7 +3466,7 @@ class GalleryManager {
     const subEl = card.querySelector('.plak-field-artist .pdf-card-field__value');
 
     // Queue for preview extraction if we don't have full data yet
-    if (!file.isMock && (file._needsRefresh || !file._artist || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
+    if (!file.isMock && (file._needsRefresh || !file._htmlContent || !file._artist || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim()) {
         previewQueue.push({ file, titleEl, subEl, imgEl, fallbackEl, codeEl: null, card, gallery: this, koleksiyonEl: null, ulkeEl: null, yilEl: null, nominalEl: null, tipiEl: null, galleryId: 'plak' });
         processPreviewQueue();
@@ -3577,7 +3577,7 @@ class GalleryManager {
     const fallbackEl = card.querySelector('.card-fallback-el');
     const titleEl = card.querySelector('.pdf-card-title-value');
 
-    if (!file.isMock && (file._needsRefresh || !file._image || !file._setName) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
+    if (!file.isMock && (file._needsRefresh || !file._htmlContent || !file._image || !file._setName) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim()) {
         previewQueue.push({ file, titleEl, subEl: null, imgEl, fallbackEl, codeEl: null, card, gallery: this, koleksiyonEl: null, ulkeEl: null, yilEl: null, nominalEl: null, tipiEl: null, galleryId: 'legoverse' });
         processPreviewQueue();
@@ -3684,7 +3684,7 @@ class GalleryManager {
     const badgeCodeEl = card.querySelector('.diecast-badge--code');
     const h3El = card.querySelector('.diecast-card__model');
 
-    if (!file.isMock && (file._needsRefresh || !file._title || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
+    if (!file.isMock && (file._needsRefresh || !file._htmlContent || !file._title || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim()) {
         previewQueue.push({ file, imgEl, fallbackEl: placeholderEl, card, gallery: this, isDiecast: true, brandEl, badgeBrandEl, badgeYearEl, badgeCodeEl, h3El });
         processPreviewQueue();
