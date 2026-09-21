@@ -1900,6 +1900,7 @@ async function getFileFromCache(file) {
     const now = Date.now();
     const isExpired = cached && cached.cachedAt && (now - cached.cachedAt > CACHE_TTL_MS);
     if (cached && cached.modifiedTime === file.modifiedTime && !isExpired) {
+      file._needsRefresh = false;
       const cacheFields = [
         '_title', '_subtitle', '_image', '_code', '_country', '_year', '_htmlContent',
         '_katalogNo', '_ulke', '_basimYili', '_basimYeri', '_nominalDeger', '_pulTipi',
@@ -2782,6 +2783,9 @@ class GalleryManager {
           const existing = existingById || existingByName;
 
           if (existing) {
+            if (df.modifiedTime && existing.modifiedTime && df.modifiedTime !== existing.modifiedTime) {
+              existing._needsRefresh = true;
+            }
             // Merge: keep precompiled fields, overlay Drive fields
             Object.assign(existing, df, {
               _title: existing._title || df._title,
@@ -3189,7 +3193,7 @@ class GalleryManager {
     const durumEl = card.querySelector('.card-durum-el');
 
     const isAllother = (galleryId === 'allother');
-    const needsExtraction = isBasilsanat ? (!file._title || !file._image || !file._tur || !file._yazar) : isAllother ? (!file._title || !file._image || !file._htmlContent) : (!file._title || !file._image);
+    const needsExtraction = file._needsRefresh || (isBasilsanat ? (!file._title || !file._image || !file._tur || !file._yazar) : isAllother ? (!file._title || !file._image || !file._htmlContent) : (!file._title || !file._image));
     if (!file.isMock && needsExtraction && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim()) {
         console.log(`[PULLUK] createPdfCard: pushing ${file.name} to previewQueue`);
@@ -3317,7 +3321,7 @@ class GalleryManager {
     const subEl = card.querySelector('.plak-field-artist .pdf-card-field__value');
 
     // Queue for preview extraction if we don't have full data yet
-    if (!file.isMock && (!file._artist || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
+    if (!file.isMock && (file._needsRefresh || !file._artist || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim()) {
         previewQueue.push({ file, titleEl, subEl, imgEl, fallbackEl, codeEl: null, card, gallery: this, koleksiyonEl: null, ulkeEl: null, yilEl: null, nominalEl: null, tipiEl: null, galleryId: 'plak' });
         processPreviewQueue();
@@ -3428,7 +3432,7 @@ class GalleryManager {
     const fallbackEl = card.querySelector('.card-fallback-el');
     const titleEl = card.querySelector('.pdf-card-title-value');
 
-    if (!file.isMock && (!file._image || !file._setName) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
+    if (!file.isMock && (file._needsRefresh || !file._image || !file._setName) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim()) {
         previewQueue.push({ file, titleEl, subEl: null, imgEl, fallbackEl, codeEl: null, card, gallery: this, koleksiyonEl: null, ulkeEl: null, yilEl: null, nominalEl: null, tipiEl: null, galleryId: 'legoverse' });
         processPreviewQueue();
@@ -3535,7 +3539,7 @@ class GalleryManager {
     const badgeCodeEl = card.querySelector('.diecast-badge--code');
     const h3El = card.querySelector('.diecast-card__model');
 
-    if (!file.isMock && (!file._title || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
+    if (!file.isMock && (file._needsRefresh || !file._title || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim()) {
         previewQueue.push({ file, imgEl, fallbackEl: placeholderEl, card, gallery: this, isDiecast: true, brandEl, badgeBrandEl, badgeYearEl, badgeCodeEl, h3El });
         processPreviewQueue();
