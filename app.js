@@ -2403,7 +2403,7 @@ async function processPreviewQueue() {
           const useProxy = window.location.protocol === 'http:';
           const mediaUrl = useProxy
             ? `/drive-proxy?fileId=${file.id}`
-            : `https://drive.google.com/uc?export=download&id=${file.id}`;
+            : `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${CONFIG.GOOGLE_API_KEY}`;
           res = await fetch(mediaUrl, { signal: pc.signal });
         } finally {
           clearTimeout(pt);
@@ -3880,7 +3880,7 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
       try {
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), 15000);
-        const res = await fetch(`https://drive.google.com/uc?export=download&id=${fileId}`, { signal: ctrl.signal, redirect: 'follow' });
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${CONFIG.GOOGLE_API_KEY}`, { signal: ctrl.signal });
         clearTimeout(timer);
         if (res.ok) {
           content = await res.text();

@@ -1278,6 +1278,12 @@ function buildGaleriEntry(file, meta) {
   const cleanTitle = stripPatterns(meta.title) || file.name.replace('.html', '');
   const cleanSubtitle = stripPatterns(meta.subtitle) || '';
 
+  // HTML dosyaları Drive'da render edilsin
+  const isHtml = file.name.endsWith('.html') || file.name.endsWith('.htm');
+  const viewLink = isHtml
+    ? `https://drive.google.com/uc?export=view&id=${file.id}`
+    : `https://drive.google.com/file/d/${file.id}/view?usp=drivesdk`;
+
   return {
     id: file.id,
     name: file.name,
@@ -1292,7 +1298,7 @@ function buildGaleriEntry(file, meta) {
     _pulTipi: meta.pulTipi || 'Posta Pulu',
     _durum: meta.durum || '',
     _katalogNo: code,
-    webViewLink: `https://drive.google.com/file/d/${file.id}/view?usp=drivesdk`,
+    webViewLink: viewLink,
     modifiedTime: file.modifiedTime || new Date().toISOString(),
   };
 }
