@@ -405,6 +405,11 @@ function extractStampInfoFromHtml(html) {
     || cleanHtml.match(/<div\s+class="col-num"[^>]*>([\s\S]*?)<\/div>/i)
     || cleanHtml.match(/<div\s+class="badge--code"[^>]*>([\s\S]*?)<\/div>/i);
   if (kodMatch) code = kodMatch[1].replace(/<[^>]+>/g, '').trim();
+  // "Koleksiyon No: MG0005" gibi formatları temizle
+  if (code) {
+    const codeClean = code.match(/(MG\d+)/i);
+    if (codeClean) code = codeClean[1].toUpperCase();
+  }
   if (!code) {
     const titleTagMatch = cleanHtml.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
     if (titleTagMatch) {
@@ -1273,8 +1278,10 @@ function extractIskambilInfoFromHtml(html) {
 // ─── BUILD ENTRY FOR EACH SECTION ──────────────────────────────────────────
 
 function buildGaleriEntry(file, meta) {
-  const codeMatch = file.name.match(/(MG\d+)/i);
-  const code = meta.code || (codeMatch ? codeMatch[1].toUpperCase() : file.name.replace('.html', '').toUpperCase());
+  // Dosya adındaki kodu birincil olarak kullan (HTML içeriğindeki kod hatalı olabilir)
+  const fileNameCode = file.name.replace(/\.(html|htm)$/i, '').toUpperCase();
+  const codeMatch = fileNameCode.match(/(MG\d+)/i);
+  const code = (codeMatch ? codeMatch[1].toUpperCase() : fileNameCode);
   const cleanTitle = stripPatterns(meta.title) || file.name.replace('.html', '');
   const cleanSubtitle = stripPatterns(meta.subtitle) || '';
 
