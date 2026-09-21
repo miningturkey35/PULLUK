@@ -2907,8 +2907,8 @@ class GalleryManager {
         const cacheTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Cache timeout')), 3000));
         try { await Promise.race([cachePromise, cacheTimeout]); } catch (_e) { }
 
-        // Clear _htmlContent so files always re-fetch fresh HTML from Drive via previewQueue
-        this.allFiles.forEach(f => { f._htmlContent = null; });
+        // Clear _htmlContent only for files that need refresh (modifiedTime changed on Drive)
+        this.allFiles.forEach(f => { if (f._needsRefresh) f._htmlContent = null; });
 
         // Clear previewQueue so only files with correct Drive IDs are processed
         previewQueue.length = 0;
@@ -3281,7 +3281,7 @@ class GalleryManager {
     const durumEl = card.querySelector('.card-durum-el');
 
     const isAllother = (galleryId === 'allother');
-    const needsExtraction = file._needsRefresh || (isBasilsanat ? (!file._title || !file._image || !file._tur || !file._yazar) : isAllother ? (!file._title || !file._image || !file._htmlContent) : (!file._title || !file._image));
+    const needsExtraction = file._needsRefresh || !file._htmlContent || (isBasilsanat ? (!file._title || !file._image || !file._tur || !file._yazar) : isAllother ? (!file._title || !file._image) : (!file._title || !file._image));
     if (!file.isMock && needsExtraction && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim()) {
         console.log(`[PULLUK] createPdfCard: pushing ${file.name} to previewQueue`);
@@ -3812,7 +3812,10 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
   // If still no content and API key exists, try alt=media as last resort
   if (!content && isHtml && CONFIG.GOOGLE_API_KEY.trim()) {
     try {
-      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${CONFIG.GOOGLE_API_KEY.trim()}`);
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 15000);
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${CONFIG.GOOGLE_API_KEY.trim()}`, { signal: ctrl.signal });
+      clearTimeout(timer);
       if (res.ok) {
         content = await res.text();
         if (cachedFile) {
@@ -3820,7 +3823,9 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
           saveFileToCache(cachedFile);
         }
       }
-    } catch (err) { }
+    } catch (err) {
+      console.warn('[PULLUK] alt=media fetch failed for viewer:', err);
+    }
   }
 
   // Extract collection number if we now have content
@@ -3871,16 +3876,11 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
     loaded = true;
   }
 
-  // If blob wasn't created, try loading directly into iframe
+  // If blob wasn't created, try loading directly into iframe (HTTP only)
   if (!loaded && isHtml) {
     frame.onload = () => loading.classList.add('is-hidden');
     if (window.location.protocol === 'http:') {
       frame.src = `/drive-proxy?fileId=${fileId}`;
-      loaded = true;
-    } else {
-      // On HTTPS (GitHub Pages), try alt=media as iframe src
-      const altMediaUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${CONFIG.GOOGLE_API_KEY.trim()}`;
-      frame.src = altMediaUrl;
       loaded = true;
     }
   }
@@ -3889,9 +3889,9 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
   if (!loaded) {
     currentFileHtml = null;
     loading.classList.add('is-hidden');
-    frame.srcdoc = `<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#aaa;flex-direction:column;gap:12px;background:#0B132B}</style>
+    frame.srcdoc = `<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#aaa;flex-direction:column;gap:12px;background:#0B132B;padding:24px;text-align:center}</style>
       <p>&#9888; Dosya içeriği yüklenemedi. Ağ hatası veya kota aşımı olabilir.</p>
-      <a href="${viewUrl}" target="_blank" style="color:#4FC3F7">Google Drive'da Aç</a>`;
+      <a href="${viewUrl}" target="_blank" rel="noopener" style="color:#4FC3F7;text-decoration:underline;font-size:1.1em">Google Drive'da Aç</a>`;
   }
 
   if (!loaded && fileId && !isHtml) {
@@ -3905,9 +3905,9 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
   if (!loaded) {
     currentFileHtml = null;
     loading.classList.add('is-hidden');
-    frame.srcdoc = `<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#aaa;flex-direction:column;gap:12px;background:#0B132B}</style>
+    frame.srcdoc = `<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#aaa;flex-direction:column;gap:12px;background:#0B132B;padding:24px;text-align:center}</style>
       <p>&#9888; Dosya içeriği yüklenemedi. Ağ hatası veya kota aşımı olabilir.</p>
-      <a href="${viewUrl}" target="_blank" style="color:#4FC3F7">Google Drive'da Aç</a>`;
+      <a href="${viewUrl}" target="_blank" rel="noopener" style="color:#4FC3F7;text-decoration:underline;font-size:1.1em">Google Drive'da Aç</a>`;
   }
 }
 
