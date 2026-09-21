@@ -1115,8 +1115,8 @@ function extractStampInfoFromHtml(html) {
   // Normalize pul tipi: izin verilen değerlere kısıtla
   pulTipi = normalizePulTipi(pulTipi);
 
-  // II. Elizabeth pullarında tip bulunamazsa "Posta Pulu" olarak varsay
-  if (!pulTipi && isIIElizabethStamp(scanText, country)) {
+  // II. Elizabeth pullarını her zaman "Posta Pulu" olarak ayarla
+  if (isIIElizabethStamp(scanText, country)) {
     pulTipi = 'Posta Pulu';
   }
 
