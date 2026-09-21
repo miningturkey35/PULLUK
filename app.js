@@ -3128,19 +3128,24 @@ class GalleryManager {
           }
         }
       } else {
-        // Extract country from text
-        const country = extractCountryFromText(textToSearch);
-        if (country) {
-          file.category = country;
+        // Use _country from collection data first, then fall back to text extraction
+        if (file._country && STAMP_COUNTRIES.some(c => c.name === file._country)) {
+          file.category = file._country;
           catSet.add(file.category);
-        } else if (!file.category && file.isMock) {
-          const parts = file.name.split(' - ');
-          if (parts.length > 1) {
-            file.category = parts[0];
+        } else {
+          const country = extractCountryFromText(textToSearch);
+          if (country) {
+            file.category = country;
+            catSet.add(file.category);
+          } else if (!file.category && file.isMock) {
+            const parts = file.name.split(' - ');
+            if (parts.length > 1) {
+              file.category = parts[0];
+              catSet.add(file.category);
+            }
+          } else if (file.category) {
             catSet.add(file.category);
           }
-        } else if (file.category) {
-          catSet.add(file.category);
         }
       }
     });
