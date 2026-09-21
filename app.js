@@ -53,6 +53,147 @@ const STAMP_COUNTRY_ABBREVS = {
   'Çin': 'ÇİN',
 };
 
+// ─── PUL TİPLERİ (izin verilen değerler) ──────────────────────────────────────
+const PUL_TIPLERI = [
+  'Posta Pulu',
+  'Damga Pulu',
+  'Vergi Pulu',
+  'Gazete Pulu',
+  'Resmî Pul',
+  'Takse Pulu',
+  'Hava Postası',
+  'Hatıra / Anma Pulu',
+  'Yardım / Semi-Postal',
+  'Diğer',
+];
+
+// Mapping: ham extraction değerlerini standart PUL_TIPLERI değerlerine eşle
+const PUL_TIPI_MAP = {
+  // Posta
+  'posta pulu': 'Posta Pulu',
+  'posta pul': 'Posta Pulu',
+  'postage': 'Posta Pulu',
+  'postage stamp': 'Posta Pulu',
+  'definitive': 'Posta Pulu',
+  // Damga
+  'damga pulu': 'Damga Pulu',
+  'damga pul': 'Damga Pulu',
+  'fiscal': 'Damga Pulu',
+  'fiscal stamp': 'Damga Pulu',
+  // Vergi
+  'vergi pulu': 'Vergi Pulu',
+  'vergi pul': 'Vergi Pulu',
+  'revenue': 'Vergi Pulu',
+  'revenue stamp': 'Vergi Pulu',
+  // Gazete
+  'gazete pulu': 'Gazete Pulu',
+  'gazete pul': 'Gazete Pulu',
+  'newspaper stamp': 'Gazete Pulu',
+  'newspaper': 'Gazete Pulu',
+  // Resmî
+  'resmî pul': 'Resmî Pul',
+  'resmi pul': 'Resmî Pul',
+  'resmî pulu': 'Resmî Pul',
+  'resmi pulu': 'Resmî Pul',
+  'official': 'Resmî Pul',
+  'official stamp': 'Resmî Pul',
+  'yetki pulu': 'Resmî Pul',
+  'yetki pul': 'Resmî Pul',
+  // Takse
+  'takse pulu': 'Takse Pulu',
+  'takse pul': 'Takse Pulu',
+  'postage due': 'Takse Pulu',
+  'postage-due': 'Takse Pulu',
+  'harç pulu': 'Takse Pulu',
+  'harç pul': 'Takse Pulu',
+  'harc pulu': 'Takse Pulu',
+  'harc pul': 'Takse Pulu',
+  // Hava Postası
+  'hava postası': 'Hava Postası',
+  'hava postasi': 'Hava Postası',
+  'airmail': 'Hava Postası',
+  'air mail': 'Hava Postası',
+  'posta havalesi': 'Hava Postası',
+  // Hatıra / Anma
+  'anma pulu': 'Hatıra / Anma Pulu',
+  'anma pul': 'Hatıra / Anma Pulu',
+  'hatıra pulu': 'Hatıra / Anma Pulu',
+  'hatıra pul': 'Hatıra / Anma Pulu',
+  'anı pulu': 'Hatıra / Anma Pulu',
+  'anı pul': 'Hatıra / Anma Pulu',
+  'commemorative': 'Hatıra / Anma Pulu',
+  'commerative': 'Hatıra / Anma Pulu',
+  'konulu pulu': 'Hatıra / Anma Pulu',
+  'konulu pul': 'Hatıra / Anma Pulu',
+  'tematik pulu': 'Hatıra / Anma Pulu',
+  'tematik pul': 'Hatıra / Anma Pulu',
+  // Yardım / Semi-Postal
+  'yardım pulu': 'Yardım / Semi-Postal',
+  'yardım pul': 'Yardım / Semi-Postal',
+  'semi-postal': 'Yardım / Semi-Postal',
+  'semi postal': 'Yardım / Semi-Postal',
+  'semi-postal stamp': 'Yardım / Semi-Postal',
+  'charity': 'Yardım / Semi-Postal',
+  'charity stamp': 'Yardım / Semi-Postal',
+  // Diğer mapped
+  'blok': 'Diğer',
+  'souvenir': 'Diğer',
+  'sheet': 'Diğer',
+  'minyatür': 'Diğer',
+  'minyatur': 'Diğer',
+  'perforasyonlu': 'Diğer',
+  'perforasyonsuz': 'Diğer',
+  'çapa': 'Diğer',
+  'kepçe': 'Diğer',
+  'gümrük': 'Diğer',
+  'gumruk': 'Diğer',
+  'resim pulu': 'Diğer',
+  'adi pulu': 'Diğer',
+  'derleme': 'Diğer',
+  'emisyon': 'Diğer',
+  'tellaloğlu': 'Diğer',
+  'davalık': 'Diğer',
+  'mühürlü': 'Diğer',
+  'parsel': 'Diğer',
+  'paket': 'Diğer',
+  'cinderella': 'Diğer',
+  'telgraf': 'Diğer',
+  'telegraph': 'Diğer',
+  'registration': 'Diğer',
+  'registered': 'Diğer',
+  'express': 'Diğer',
+  'ekspres': 'Diğer',
+  'special delivery': 'Diğer',
+  'parcel': 'Diğer',
+  'package': 'Diğer',
+};
+
+function normalizePulTipi(raw) {
+  if (!raw) return '';
+  const low = raw.toLowerCase().trim();
+
+  // 1. Doğrudan PUL_TIPLERI içinde mi?
+  if (PUL_TIPLERI.includes(raw.trim())) return raw.trim();
+
+  // 2. Map'te eşleşme var mı?
+  if (PUL_TIPI_MAP[low]) return PUL_TIPI_MAP[low];
+
+  // 3. Kısmi eşleşme dene
+  for (const [key, val] of Object.entries(PUL_TIPI_MAP)) {
+    if (low.includes(key) || key.includes(low)) return val;
+  }
+
+  // 4. Hiçbiri eşleşmezse, orijinali "Diğer" olarak döndür
+  return 'Diğer';
+}
+
+// II. Elizabeth pullarını tespit et
+function isIIElizabethStamp(scanText, country) {
+  const isUK = country === 'Birleşik Krallık';
+  const hasElizabeth = /elizabeth\s*ii|ii\.\s*elizabeth|queen\s+elizabeth/i.test(scanText);
+  return isUK || hasElizabeth;
+}
+
 function buildStampCodeBadge(code, country, year) {
   // If country or year missing, try to extract from code pattern
   // e.g. "MG0001 OSMANLI-1900" or "MG0016 T.C.-1926" or just "MG0001"
@@ -961,67 +1102,13 @@ function extractStampInfoFromHtml(html) {
       if (pulTipi) break;
     }
   }
-  // Normalize: ilk harfi büyük yap, Türkçe karakterleri düzelt
-  if (pulTipi) {
-    pulTipi = pulTipi.trim();
-    // Standartlaştır: yaygın varyasyonları düzelte
-    const normalized = pulTipi.toLowerCase()
-      .replace(/posta\s+pul\b/, 'Posta Pulu')
-      .replace(/damga\s+pul\b/, 'Damga Pulu')
-      .replace(/vergi\s+pul\b/, 'Vergi Pulu')
-      .replace(/harç\s+pul\b/, 'Harç Pulu')
-      .replace(/harc\s+pul\b/, 'Harç Pulu')
-      .replace(/anma\s+pul\b/, 'Anma Pulu')
-      .replace(/konulu\s+pul\b/, 'Konulu Pulu')
-      .replace(/tematik\s+pul\b/, 'Tematik Pulu')
-      .replace(/hatıra\s+pul\b/, 'Hatıra Pulu')
-      .replace(/anı\s+pul\b/, 'Anı Pulu')
-      .replace(/resim\s+pul\b/, 'Resim Pulu')
-      .replace(/adi\s+pul\b/, 'Adi Pulu')
-      .replace(/resmi\s+pul\b/, 'Resmi Pulu')
-      .replace(/resmî\s+pul\b/, 'Resmi Pulu')
-      .replace(/yetki\s+pul\b/, 'Yetki Pulu')
-      .replace(/gümrük\s+pul\b/, 'Gümrük Pulu')
-      .replace(/gumruk\s+pul\b/, 'Gümrük Pulu')
-      .replace(/posta\s+havalesi/, 'Posta Havalesi')
-      .replace(/hava\s+postas[ıi]/, 'Hava Postası')
-      .replace(/blok/, 'Blok')
-      .replace(/souvenir/, 'Blok')
-      .replace(/sheet/, 'Blok')
-      .replace(/minyatür|minyatur/, 'Minyatür')
-      .replace(/perforasyonlu/, 'Perforasyonlu')
-      .replace(/perforasyonsuz/, 'Perforasyonsuz')
-      .replace(/çapa/, 'Çapa')
-      .replace(/kepçe/, 'Kepçe')
-      .replace(/^pul$/, 'Pul')
-      .replace(/^damga$/, 'Damga Pulu')
-      .replace(/^posta$/, 'Posta Pulu')
-      .replace(/^vergi$/, 'Vergi Pulu')
-      .replace(/^harç$/, 'Harç Pulu')
-      .replace(/^harc$/, 'Harç Pulu')
-      .replace(/^anma$/, 'Anma Pulu')
-      .replace(/^konulu$/, 'Konulu Pulu')
-      .replace(/^tematik$/, 'Tematik Pulu')
-      .replace(/^hatıra$/, 'Hatıra Pulu')
-      .replace(/^anı$/, 'Anı Pulu')
-      .replace(/^resim$/, 'Resim Pulu')
-      .replace(/^adi$/, 'Adi Pulu')
-      .replace(/^resmi$/, 'Resmi Pulu')
-      .replace(/^yetki$/, 'Yetki Pulu')
-      .replace(/^gümrük$/, 'Gümrük Pulu')
-      .replace(/^gumruk$/, 'Gümrük Pulu')
-      .replace(/^blok$/, 'Blok')
-      .replace(/^souvenir$/, 'Blok')
-      .replace(/^sheet$/, 'Blok')
-      .replace(/^minyatür$/, 'Minyatür')
-      .replace(/^minyatur$/, 'Minyatür');
-    
-    // İlk harf büyük, diğerleri küçük (Türkçe karakterlerle uyumlu)
-    pulTipi = normalized.charAt(0).toLocaleUpperCase('tr') + normalized.slice(1).toLocaleLowerCase('tr');
-  }
+  // Normalize pul tipi: izin verilen değerlere kısıtla
+  pulTipi = normalizePulTipi(pulTipi);
 
-  // NOT: Artık tipleri "Damga pulu" tek etiketi altında TOPILAMIYORUZ
-  // Her pul tipi kendi adıyla korunuyor (Posta Pulu, Damga Pulu, Vergi Pulu, Harç Pulu, Anma Pulu, vb.)
+  // II. Elizabeth pullarında tip bulunamazsa "Posta Pulu" olarak varsay
+  if (!pulTipi && isIIElizabethStamp(scanText, country)) {
+    pulTipi = 'Posta Pulu';
+  }
 
   // ── 9. BASIM YERİ: extract from table cells or text ──
   const basimYeriKeys = [
