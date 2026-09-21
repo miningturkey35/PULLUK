@@ -75,6 +75,7 @@ const PUL_TIPI_MAP = {
   'postage': 'Posta Pulu',
   'postage stamp': 'Posta Pulu',
   'definitive': 'Posta Pulu',
+  'definitif': 'Posta Pulu',
   // Damga
   'damga pulu': 'Damga Pulu',
   'damga pul': 'Damga Pulu',
@@ -1043,7 +1044,14 @@ function extractStampInfoFromHtml(html) {
   if (!basimYili && year) basimYili = year;
 
   // ── 8. PUL TİPİ: extract from text ──
-  // First, check for "****" pattern which indicates Damga Pulu
+  // First, check title for definitive/definitif keywords (high confidence)
+  if (title) {
+    const titleLower = title.toLowerCase();
+    if (/\bdefinitive\b|\bdefinitif\b|\badi\s+pul/i.test(titleLower)) {
+      pulTipi = 'Posta Pulu';
+    }
+  }
+  // Check for "****" pattern which indicates Damga Pulu
   const asteriskDamga = allText.match(/\*{4,}/);
   if (asteriskDamga) {
     pulTipi = 'Damga Pulu';

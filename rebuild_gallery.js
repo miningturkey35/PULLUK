@@ -58,7 +58,7 @@ const PUL_TIPLERI = [
 
 const PUL_TIPI_MAP = {
   'posta pulu': 'Posta Pulu', 'posta pul': 'Posta Pulu', 'postage': 'Posta Pulu',
-  'postage stamp': 'Posta Pulu', 'definitive': 'Posta Pulu',
+  'postage stamp': 'Posta Pulu', 'definitive': 'Posta Pulu', 'definitif': 'Posta Pulu',
   'damga pulu': 'Damga Pulu', 'damga pul': 'Damga Pulu', 'fiscal': 'Damga Pulu',
   'fiscal stamp': 'Damga Pulu',
   'vergi pulu': 'Vergi Pulu', 'vergi pul': 'Vergi Pulu', 'revenue': 'Vergi Pulu',
@@ -121,6 +121,13 @@ const DIECAST_BRAND_ALIASES = {
 const BASILSANAT_TUR_CANONICAL = ['Kitap', 'Çizgi Roman', 'Dergi', 'Gazete', 'Katalog', 'Broşür', 'Efemera', 'Diğer'];
 
 // ─── HELPER FUNCTIONS ───────────────────────────────────────────────────────
+
+// II. Elizabeth pullarını tespit et
+function isIIElizabethStamp(scanText, country) {
+  const isUK = country === 'Birleşik Krallık' || country === 'UK';
+  const hasElizabeth = /elizabeth\s*ii|ii\.\s*elizabeth|queen\s+elizabeth/i.test(scanText);
+  return isUK || hasElizabeth;
+}
 
 function normalizePulTipi(raw) {
   if (!raw) return '';
@@ -510,6 +517,13 @@ function extractStampInfoFromHtml(html) {
   if (!basimYili && year) basimYili = year;
 
   // ── PUL TİPİ ──
+  // First, check title for definitive/definitif keywords (high confidence)
+  if (title) {
+    const titleLower = title.toLowerCase();
+    if (/\bdefinitive\b|\bdefinitif\b|\badi\s+pul/i.test(titleLower)) {
+      pulTipi = 'Posta Pulu';
+    }
+  }
   if (allText.match(/\*{4,}/)) {
     pulTipi = 'Damga Pulu';
   }
@@ -547,6 +561,11 @@ function extractStampInfoFromHtml(html) {
     }
   }
   pulTipi = normalizePulTipi(pulTipi);
+
+  // II. Elizabeth pullarında tip bulunamazsa "Posta Pulu" olarak varsay
+  if (!pulTipi && isIIElizabethStamp(scanText, country)) {
+    pulTipi = 'Posta Pulu';
+  }
 
   // ── BASIM YERİ ──
   const basimYeriKeys = [
