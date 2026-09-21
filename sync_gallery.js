@@ -15,9 +15,14 @@ const API_KEY = 'AIzaSyD1aCCMa-7dGRxOT3IS19CToJcRfrfF_Vs';
 const GALERI_FOLDER_ID = '11AeW1GWpmhOk28Xt-AD65e6eH12Bk4t8';
 const DATA_FILE = path.join(__dirname, 'data', 'collection_data.js');
 
-function fetchUrl(url) {
+function fetchUrl(url, maxRedirects = 5) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { timeout: 60000 }, (res) => {
+      // Follow redirects (301, 302, 303, 307, 308)
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && maxRedirects > 0) {
+        res.resume();
+        return fetchUrl(res.headers.location, maxRedirects - 1).then(resolve, reject);
+      }
       const chunks = [];
       res.on('data', chunk => chunks.push(chunk));
       res.on('end', () => {
@@ -157,7 +162,7 @@ async function main() {
   for (const file of newFiles) {
     try {
       console.log(`   Fetching ${file.name}...`);
-      const mediaUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${API_KEY}`;
+      const mediaUrl = `https://drive.google.com/uc?export=download&id=${file.id}`;
       const mediaRes = await fetchUrl(mediaUrl);
       if (mediaRes.status !== 200) {
         console.log(`   ⚠ ${file.name}: HTTP ${mediaRes.status} — skipping`);
@@ -213,7 +218,7 @@ async function main() {
   for (const file of modifiedFiles) {
     try {
       console.log(`   Fetching ${file.name}...`);
-      const mediaUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${API_KEY}`;
+      const mediaUrl = `https://drive.google.com/uc?export=download&id=${file.id}`;
       const mediaRes = await fetchUrl(mediaUrl);
       if (mediaRes.status !== 200) {
         console.log(`   ⚠ ${file.name}: HTTP ${mediaRes.status} — skipping`);
