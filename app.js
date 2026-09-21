@@ -1962,7 +1962,7 @@ function extractLegoverseInfoFromHtml(html) {
 }
 
 const DB_NAME = 'PullukDB';
-const DB_VERSION = 13; // v13: clear cache after MG0050 Drive ID change
+const DB_VERSION = 14; // v14: clear cache after MG0004/MG0005/MG0006 label update
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const STORE_NAME = 'fileCache';
 
