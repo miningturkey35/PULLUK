@@ -3866,22 +3866,30 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
     }
   }
 
-  // If still no content and API key exists, try alt=media as last resort
+  // If still no content and API key exists, try alt=media with retry
   if (!content && isHtml && CONFIG.GOOGLE_API_KEY.trim()) {
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 15000);
-      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${CONFIG.GOOGLE_API_KEY.trim()}`, { signal: ctrl.signal });
-      clearTimeout(timer);
-      if (res.ok) {
-        content = await res.text();
-        if (cachedFile) {
-          cachedFile._htmlContent = content;
-          saveFileToCache(cachedFile);
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 15000);
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${CONFIG.GOOGLE_API_KEY.trim()}`, { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (res.ok) {
+          content = await res.text();
+          if (cachedFile) {
+            cachedFile._htmlContent = content;
+            saveFileToCache(cachedFile);
+          }
+          break;
         }
+        if (res.status === 429 && attempt < 2) {
+          await new Promise(r => setTimeout(r, 2000));
+          continue;
+        }
+      } catch (err) {
+        console.warn(`[PULLUK] alt=media fetch attempt ${attempt} failed:`, err);
+        if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
       }
-    } catch (err) {
-      console.warn('[PULLUK] alt=media fetch failed for viewer:', err);
     }
   }
 
@@ -3942,16 +3950,8 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
     }
   }
 
-  // If still not loaded, show error with Drive link
-  if (!loaded) {
-    currentFileHtml = null;
-    loading.classList.add('is-hidden');
-    frame.srcdoc = `<style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#aaa;flex-direction:column;gap:12px;background:#0B132B;padding:24px;text-align:center}</style>
-      <p>&#9888; Dosya içeriği yüklenemedi. Ağ hatası veya kota aşımı olabilir.</p>
-      <a href="${viewUrl}" target="_blank" rel="noopener" style="color:#4FC3F7;text-decoration:underline;font-size:1.1em">Google Drive'da Aç</a>`;
-  }
-
-  if (!loaded && fileId && !isHtml) {
+  // If still not loaded, try Google Drive embed as fallback (works for both HTML and non-HTML)
+  if (!loaded && fileId) {
     currentFileHtml = null;
     const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
     frame.onload = () => loading.classList.add('is-hidden');
@@ -3959,6 +3959,7 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
     loaded = true;
   }
 
+  // Last resort: show error with Drive link
   if (!loaded) {
     currentFileHtml = null;
     loading.classList.add('is-hidden');
