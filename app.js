@@ -1909,6 +1909,13 @@ function extractLegoverseInfoFromHtml(html) {
     tableData['nadirlik derecesi'] = rarityEl.textContent.trim();
   }
 
+  // Extract collection code from .coll-num (e.g., MGL001)
+  const collNumEl = doc.querySelector('.coll-num, .collection-number, .col-num');
+  if (collNumEl) {
+    const collText = collNumEl.textContent.trim();
+    if (collText) code = collText;
+  }
+
   const findKey = (...keys) => {
     for (const k of keys) {
       const low = k.toLowerCase();
@@ -1941,7 +1948,7 @@ function extractLegoverseInfoFromHtml(html) {
 
   if (!setName && title) setName = title;
 
-  code = setNo;
+  if (!code) code = setNo;
 
   return { title, subtitle, image, code, setNo, setName, theme, subTheme, pieceCount, minifigCount, year, rarity, condition, setStatus, rrp, estValue, rareMinifigs, rarePieces };
 }
@@ -2161,6 +2168,7 @@ async function processPreviewQueue() {
           if (legoData.estValue) file._estValue = legoData.estValue;
           if (legoData.rareMinifigs) file._rareMinifigs = legoData.rareMinifigs;
           if (legoData.rarePieces) file._rarePieces = legoData.rarePieces;
+          if (legoData.year) file._year = legoData.year;
           if (legoData.setName) file._title = legoData.setName;
           if (legoData.theme) file._subtitle = legoData.subTheme ? `${legoData.theme} — ${legoData.subTheme}` : legoData.theme;
           saveFileToCache(file);
@@ -2476,6 +2484,7 @@ async function processPreviewQueue() {
           file._estValue = legoData.estValue;
           file._rareMinifigs = legoData.rareMinifigs;
           file._rarePieces = legoData.rarePieces;
+          if (legoData.year) file._year = legoData.year;
           if (legoData.setName) file._title = legoData.setName;
           if (legoData.theme) file._subtitle = legoData.subTheme ? `${legoData.theme} — ${legoData.subTheme}` : legoData.theme;
         }
@@ -2746,7 +2755,7 @@ function updateCardUI(item) {
       ];
       
       const plakFieldEls = card.querySelectorAll('.pdf-card-info .pdf-card-field');
-      plakFieldEls.forEach((fieldEl, i) => {
+       plakFieldEls.forEach((fieldEl, i) => {
         if (i < plakValues.length) {
           const valueEl = fieldEl.querySelector('.pdf-card-field__value');
           if (valueEl) {
@@ -2755,6 +2764,54 @@ function updateCardUI(item) {
         }
       });
    }
+
+  // Legoverse-specific updates: re-extract and update LEGO card fields
+  if (galleryId === 'legoverse' && card) {
+    let legoData = {};
+    if (file._htmlContent) {
+      legoData = extractLegoverseInfoFromHtml(file._htmlContent);
+    }
+    const setNo = file._setNo || legoData.setNo || '';
+    const setName = file._setName || legoData.setName || file._title || '';
+    const theme = file._theme || legoData.theme || '';
+    const subTheme = file._subTheme || legoData.subTheme || '';
+    const pieceCount = file._pieceCount || legoData.pieceCount || '';
+    const year = file._year || legoData.year || '';
+    const rarity = file._rarity || legoData.rarity || '';
+
+    // Update image
+    const legoImgEl = card.querySelector('.card-img-el');
+    const legoFallbackEl = card.querySelector('.card-fallback-el');
+    if (legoImgEl && file._image) {
+      legoImgEl.src = file._image;
+      legoImgEl.style.display = 'block';
+      if (legoFallbackEl) legoFallbackEl.style.display = 'none';
+    }
+
+    // Update all LEGO-specific fields by index (Set Adı, Set No, Tema, Yıl, Parça, Nadirlik)
+    const legoValues = [
+      setName || '',
+      setNo || '',
+      (theme || '') + (subTheme ? ' — ' + subTheme : ''),
+      year || '',
+      pieceCount || '',
+      rarity || ''
+    ];
+    const legoFieldEls = card.querySelectorAll('.pdf-card-info .pdf-card-field');
+    legoFieldEls.forEach((fieldEl, i) => {
+      if (i < legoValues.length) {
+        const valueEl = fieldEl.querySelector('.pdf-card-field__value');
+        if (valueEl) valueEl.textContent = legoValues[i] || '—';
+      }
+    });
+
+    // Update card dataset
+    if (setName) {
+      card.dataset.name = setName.toLowerCase();
+      card.setAttribute('aria-label', `${setName} — görüntüle`);
+    }
+    if (theme) card.dataset.category = theme.toLowerCase();
+  }
  }
 
  // ─── GALLERY MANAGER ───────────────────────────────────────────────────────
