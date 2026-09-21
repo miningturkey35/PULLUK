@@ -1065,9 +1065,11 @@ function extractStampInfoFromHtml(html) {
     // fallback: sadece "pul" kelimesi varsa tip bulamadık
     /\b(pul)\b/i
   ];
-  for (const pat of stampTypePatterns) {
-    const tm = scanText.match(pat);
-    if (tm) { pulTipi = tm[1] || tm[0]; break; }
+  if (!pulTipi) {
+    for (const pat of stampTypePatterns) {
+      const tm = scanText.match(pat);
+      if (tm) { pulTipi = tm[1] || tm[0]; break; }
+    }
   }
   // Fallback: try subtitle
   if (!pulTipi && subtitle) {
@@ -1261,7 +1263,7 @@ function extractStampInfoFromHtml(html) {
     else if (isDamgasiz) durum = 'Damgasız';
 }
   return {
-    title, subtitle, image, code, country, year, nominalDeger, pulTipi, basimYili, basimYeri, durum, ozet
+    title, subtitle, image, code, country, year, katalogNo, ulke, nominalDeger, pulTipi, basimYili, basimYeri, durum, ozet
   };
 }
 // ─── BASILSANAT (PRINTED WORKS) EXTRACTOR ────────────────────────────────────
@@ -2414,14 +2416,13 @@ async function processPreviewQueue() {
         file._code = extracted.code;
         file._country = extracted.country;
         file._year = extracted.year;
-        file._nominal = extracted.denomination;
+        file._nominal = extracted.nominalDeger;
         file._pulTipi = extracted.pulTipi;
         file._katalogNo = extracted.katalogNo;
         file._ulke = extracted.ulke;
         file._basimYili = extracted.basimYili;
         file._basimYeri = extracted.basimYeri;
         file._nominalDeger = extracted.nominalDeger;
-        file._pulTipi = extracted.pulTipi;
         file._ozet = extracted.ozet;
         file._durum = extracted.durum;
         file._htmlContent = html;
