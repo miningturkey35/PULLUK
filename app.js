@@ -2551,8 +2551,47 @@ async function processPreviewQueue() {
           console.warn(`[PULLUK] Giving up on ${file.name} after ${PREVIEW_MAX_RETRIES} retries`);
           const fallbackTitle = file.name.replace(/\.(html|htm|pdf)$/i, '');
           if (titleEl) titleEl.textContent = fallbackTitle;
-          // Also update 5-field card values so they don't stay as em-dash
           const fileNameNoExt = fallbackTitle.toUpperCase();
+
+          // Plak-specific fallback: update card fields by querying DOM directly
+          if (galleryId === 'plak' && card) {
+            const plakFallbackValues = [
+              file._album || fallbackTitle,
+              file._artist || '',
+              file._plakSirketi || '',
+              file._year || '',
+              file._format || '',
+              fileNameNoExt
+            ];
+            const plakFieldEls = card.querySelectorAll('.pdf-card-info .pdf-card-field');
+            plakFieldEls.forEach((fieldEl, i) => {
+              if (i < plakFallbackValues.length) {
+                const valueEl = fieldEl.querySelector('.pdf-card-field__value');
+                if (valueEl && !valueEl.textContent.trim()) valueEl.textContent = plakFallbackValues[i] || '—';
+              }
+            });
+          }
+
+          // Basilsanat-specific fallback
+          if (galleryId === 'basilsanat' && card) {
+            const basFallbackValues = [
+              file._katalogNo || file._code || fileNameNoExt,
+              file._yazar || '',
+              file._year || file._basimYili || '',
+              file._yayinevi || '',
+              normalizeBasilsanatTur(file._tur || file.category) || '',
+              file._durum || ''
+            ];
+            const basFieldEls = card.querySelectorAll('.pdf-card-info .pdf-card-field');
+            basFieldEls.forEach((fieldEl, i) => {
+              if (i < basFallbackValues.length) {
+                const valueEl = fieldEl.querySelector('.pdf-card-field__value');
+                if (valueEl && !valueEl.textContent.trim()) valueEl.textContent = basFallbackValues[i] || '—';
+              }
+            });
+          }
+
+          // Standard 5-field card fallback (galeri, iskambil, allother, legoverse)
           if (koleksiyonEl) {
             const valEl = koleksiyonEl.querySelector('.pdf-card-field__value');
             if (valEl && !valEl.textContent.trim()) valEl.textContent = file._code || file._katalogNo || fileNameNoExt;
@@ -2738,36 +2777,32 @@ function updateCardUI(item) {
 
    // Plak-specific updates: update vinyl information from extracted HTML data
    if (galleryId === 'plak' && card) {
-     // Calculate file name without extension for Koleksiyon No
      const fileNameNoExt = file.name.replace(/\.(html|htm|pdf)$/i, '');
-     
-     // Update title and subtitle if they were extracted
-     if (titleEl) titleEl.textContent = file._title || '';
-     if (subEl) subEl.textContent = file._subtitle || '';
-     
-     // Update image if available
+
+     if (titleEl) titleEl.textContent = file._title || file._album || fileNameNoExt;
+     if (subEl) subEl.textContent = file._subtitle || file._artist || '';
+
      if (imgEl && file._image) {
        imgEl.src = file._image;
        imgEl.style.display = 'block';
        if (fallbackEl) fallbackEl.style.display = 'none';
      }
-     
-      // Update all plak-specific fields by index
+
       const plakValues = [
-        file._album || '',
-        file._artist || '',
+        file._album || file._title || fileNameNoExt,
+        file._artist || file._subtitle || '',
         file._plakSirketi || '',
-        file._year || '',
+        file._year || file._basimYili || '',
         file._format || '',
-        fileNameNoExt || ''
+        fileNameNoExt
       ];
-      
+
       const plakFieldEls = card.querySelectorAll('.pdf-card-info .pdf-card-field');
        plakFieldEls.forEach((fieldEl, i) => {
         if (i < plakValues.length) {
           const valueEl = fieldEl.querySelector('.pdf-card-field__value');
-          if (valueEl) {
-            valueEl.textContent = plakValues[i] || '—';
+          if (valueEl && plakValues[i]) {
+            valueEl.textContent = plakValues[i];
           }
         }
       });
