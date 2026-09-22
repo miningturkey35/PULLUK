@@ -3021,9 +3021,12 @@ class GalleryManager {
         // Clear _htmlContent only for files that need refresh (modifiedTime changed on Drive)
         this.allFiles.forEach(f => { if (f._needsRefresh) f._htmlContent = null; });
 
-        // Clear previewQueue so only files with correct Drive IDs are processed
-        previewQueue.length = 0;
-        isPreviewProcessing = false;
+        // Clear this gallery's previewQueue so only files with correct Drive IDs are processed.
+        // Only items of THIS gallery are removed — concurrent load() calls of other galleries
+        // must not wipe each other's pending extraction items.
+        for (let qi = previewQueue.length - 1; qi >= 0; qi--) {
+          if (previewQueue[qi].gallery === this) previewQueue.splice(qi, 1);
+        }
 
         this.updateFilterButtonsDynamically();
         this.filteredFiles = [...this.allFiles];

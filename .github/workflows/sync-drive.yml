@@ -22,7 +22,7 @@ jobs:
           node-version: '20'
 
       - name: Run incremental rebuild
-        run: node rebuild_gallery.js --incremental
+        run: node rebuild_gallery.js --all --incremental
 
       - name: Check for changes
         id: changes
