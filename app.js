@@ -3129,8 +3129,11 @@ class GalleryManager {
         }
       } else {
         // Use _country from collection data first, then fall back to text extraction
-        if (file._country && STAMP_COUNTRIES.some(c => c.name === file._country)) {
-          file.category = file._country;
+        const matchedCountry = STAMP_COUNTRIES.find(c =>
+          c.name === file._country || (STAMP_COUNTRY_ABBREVS[c.name] === file._country)
+        );
+        if (matchedCountry) {
+          file.category = matchedCountry.name;
           catSet.add(file.category);
         } else {
           const country = extractCountryFromText(textToSearch);
