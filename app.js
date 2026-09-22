@@ -2635,9 +2635,11 @@ function updateCardUI(item) {
   if (file._country) file._country = normalizeCountryName(file._country);
   if (file._ulke) file._ulke = normalizeCountryName(file._ulke);
 
-  // Standard PDF card updates
-  if (titleEl) titleEl.textContent = file._title;
-  if (subEl) subEl.textContent = file._subtitle || '';
+  // Standard PDF card updates (skip title/subtitle for Plak — Plak-specific section below handles these)
+  if (galleryId !== 'plak') {
+    if (titleEl) titleEl.textContent = file._title;
+    if (subEl) subEl.textContent = file._subtitle || '';
+  }
   if (codeEl) {
     const codeBadge = buildStampCodeBadge(file._code, file._country, file._year);
     if (codeBadge) {
@@ -2788,12 +2790,12 @@ function updateCardUI(item) {
        if (fallbackEl) fallbackEl.style.display = 'none';
      }
 
-      const plakValues = [
+       const plakValues = [
         file._album || file._title || fileNameNoExt,
-        file._artist || file._subtitle || '',
-        file._plakSirketi || '',
-        file._year || file._basimYili || '',
-        file._format || '',
+        file._artist || file._subtitle || '—',
+        file._plakSirketi || '—',
+        file._year || file._basimYili || '—',
+        file._format || '—',
         fileNameNoExt
       ];
 
@@ -2801,7 +2803,7 @@ function updateCardUI(item) {
        plakFieldEls.forEach((fieldEl, i) => {
         if (i < plakValues.length) {
           const valueEl = fieldEl.querySelector('.pdf-card-field__value');
-          if (valueEl && plakValues[i]) {
+          if (valueEl) {
             valueEl.textContent = plakValues[i];
           }
         }
