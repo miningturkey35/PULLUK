@@ -813,6 +813,8 @@ function extractStampInfoFromHtml(html) {
   let code = '';
   let country = '';
   let year = '';
+  let katalogNo = '';
+  let ulke = '';
   let nominalDeger = '';
   let pulTipi = '';
   let basimYili = '';
@@ -1270,6 +1272,13 @@ function extractStampInfoFromHtml(html) {
     if (isDamgali) durum = 'Damgalı';
     else if (isDamgasiz) durum = 'Damgasız';
 }
+  // ── 12. KATALOG NO: extract from table or fallback to code ──
+  katalogNo = findTableValue('katalog', 'katalog no', 'catalog', 'catalog no', 'no', 'numara', 'series', ' seri');
+  if (!katalogNo) katalogNo = code;
+
+  // ── 13. ÜLKE (alias for country) ──
+  ulke = country;
+
   return {
     title, subtitle, image, code, country, year, katalogNo, ulke, nominalDeger, pulTipi, basimYili, basimYeri, durum, ozet
   };
