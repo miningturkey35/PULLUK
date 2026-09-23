@@ -192,7 +192,7 @@ function extractAllInfo(fileId, fileName, galleryType, html) {
     if (damgaMatch) data._pulTipi = damgaMatch[0];
   }
   data._durum = find('durum', 'kondisyon', 'condition') || 'Çil (Mint)';
-  data._katalogNo = find('katalog no', 'katalog', 'katalog numarası') || data._code;
+  data._katalogNo = data._code || find('kod', 'code') || '';
 
   // Build clean title
   let chosenTitle = '';

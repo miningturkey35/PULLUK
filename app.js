@@ -866,7 +866,7 @@ function extractStampInfoFromHtml(html) {
     return '';
   };
 
-  // ── 1. KODEX (.kod element, then .collection-number, then .coll-num, then <title>) ──
+  // ── 1. KODEX (.kod element, then .collection-number, then .coll-num, then table "Kod" row, then <title>) ──
   const kodEl = doc.querySelector('.kod');
   if (kodEl) {
     code = kodEl.textContent.trim();
@@ -879,11 +879,16 @@ function extractStampInfoFromHtml(html) {
       if (codeEl3) {
         code = codeEl3.textContent.trim();
       } else {
-        const titleTag = doc.querySelector('title');
-        if (titleTag) {
-          const rawTitle = titleTag.textContent.trim();
-          const codeMatch = rawTitle.match(/\b(M[GCKR]\w*\d+)\b/i);
-          if (codeMatch) code = codeMatch[1].trim();
+        const tableCode = findTableValue('kod', 'code');
+        if (tableCode) {
+          code = tableCode;
+        } else {
+          const titleTag = doc.querySelector('title');
+          if (titleTag) {
+            const rawTitle = titleTag.textContent.trim();
+            const codeMatch = rawTitle.match(/\b(M[GCKR]\w*\d+)\b/i);
+            if (codeMatch) code = codeMatch[1].trim();
+          }
         }
       }
     }
@@ -1272,8 +1277,8 @@ function extractStampInfoFromHtml(html) {
     if (isDamgali) durum = 'Damgalı';
     else if (isDamgasiz) durum = 'Damgasız';
 }
-  // ── 12. KATALOG NO: extract from table or fallback to code ──
-  katalogNo = findTableValue('katalog', 'katalog no', 'catalog', 'catalog no', 'no', 'numara', 'series', ' seri');
+  // ── 12. KATALOG NO: koleksiyon kodu — asla serbest metin Katalog/Seri satırı değil ──
+  katalogNo = code || findTableValue('kod', 'code') || '';
   if (!katalogNo) katalogNo = code;
 
   // ── 13. ÜLKE (alias for country) ──
@@ -1971,7 +1976,7 @@ function extractLegoverseInfoFromHtml(html) {
 }
 
 const DB_NAME = 'PullukDB';
-const DB_VERSION = 14; // v14: clear cache after MG0004/MG0005/MG0006 label update
+const DB_VERSION = 15; // v15: clear cache after koleksiyon no (katalogNo) extraction fix
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const STORE_NAME = 'fileCache';
 
@@ -2438,12 +2443,12 @@ async function processPreviewQueue() {
         file._title = extracted.title || file.name.replace(/\.(html|htm|pdf)$/i, '');
         file._subtitle = extracted.subtitle;
         file._image = extracted.image;
-        file._code = extracted.code;
+        file._code = extracted.code || file._code;
         file._country = extracted.country;
         file._year = extracted.year;
         file._nominal = extracted.nominalDeger;
         file._pulTipi = extracted.pulTipi;
-        file._katalogNo = extracted.katalogNo;
+        file._katalogNo = extracted.katalogNo || file._code || file._katalogNo;
         file._ulke = extracted.ulke;
         file._basimYili = extracted.basimYili;
         file._basimYeri = extracted.basimYeri;
@@ -2689,7 +2694,7 @@ function updateCardUI(item) {
     // Populate 5-field card elements
     if (koleksiyonEl) {
       const valEl = koleksiyonEl.querySelector('.pdf-card-field__value');
-      if (valEl) valEl.textContent = file._katalogNo || file._code || fileNameNoExt || '—';
+      if (valEl) valEl.textContent = file._code || file._katalogNo || fileNameNoExt || '—';
     }
     if (ulkeEl) {
       const valEl = ulkeEl.querySelector('.pdf-card-field__value');
