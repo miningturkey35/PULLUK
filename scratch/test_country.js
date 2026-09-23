@@ -48,6 +48,12 @@ const cases = [
   ['Rusya CCCP sovyet dönemi', 'Rusya'],
   ['ptt pulları', 'Türkiye Cumhuriyeti'],
   ['england victoria dönemi', 'Birleşik Krallık'],
+  // TC + Osmanlı birlikte geçen sayfalarda TC kazanmalı (commit 3ca1d11 niyeti)
+  ['Osmanlı Bankası deposundan Cumhuriyet dönemi pullar', 'Türkiye Cumhuriyeti'],
+  ['Türkiye Cumhuriyeti — 5 Kuruş', 'Türkiye Cumhuriyeti'],
+  ['Osmanlı Arzuhâl Varakası — 1 Kuruş', 'Osmanlı İmp.'],
+  ['Ülke / Dönem: Osmanlı İmparatorluğu • Sultan Abdülaziz', 'Osmanlı İmp.'],
+  ['Ülke: Türkiye Cumhuriyeti', 'Türkiye Cumhuriyeti'],
 ];
 
 let pass = 0, fail = 0;

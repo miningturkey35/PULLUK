@@ -38,9 +38,10 @@ const FOLDERS = {
 const ALL_SECTIONS = Object.keys(FOLDERS);
 
 // ─── STAMP COUNTRIES ────────────────────────────────────────────────────────
+// Türkiye Cumhuriyeti Osmanlı'dan ÖNCE kontrol edilir (app.js ile aynı sıra).
 const STAMP_COUNTRIES = [
-  { name: 'Osmanlı İmp.', keywords: ['osmanlı', 'ottoman', 'imp.', 'imparatorlugu', 'imparatorluğu'] },
   { name: 'Türkiye Cumhuriyeti', keywords: ['türkiye cumhuriyeti', 'turkiye cumhuriyeti', 'tc ', 't.c.', 'cumhuriyet', 'tayyare', 'cemiyeti', 'thk', 'türk hava', 'hava kurumu', 'ptt', 'posta ve telgraf', 'demiryolları', 'tcdd'] },
+  { name: 'Osmanlı İmp.', keywords: ['osmanlı', 'ottoman', 'imp.', 'imparatorlugu', 'imparatorluğu'] },
   { name: 'Birleşik Krallık', keywords: ['birleşik krallık', 'birlesik krallik', 'united kingdom', 'uk ', 'great britain', 'ingiltere', 'england'] },
   { name: 'Almanya', keywords: ['almanya', 'germany', 'deutschland', 'bundespost', 'ddr'] },
   { name: 'ABD', keywords: ['abd', 'usa', 'united states', 'amerika'] },
@@ -159,6 +160,25 @@ function stripPatterns(str) {
     .replace(/KOLEKSİYON(U)?/gi, '')
     .replace(/MG[A-Z]?\s*\d+/gi, '')
     .replace(/^[\s\d\-.:|•·]+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// HTML parçasını düz metne çevirir: <br>/</p> gibi etiketler araya
+// BOŞLUK eklenmeden silinirse "Türkiye Cumhuriyeti1 Kuruş" gibi
+// birleşmiş başlıklar oluşur — engelle.
+function htmlToText(html) {
+  if (!html) return '';
+  return html
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/(p|div|span|h[1-6]|li|td|th|a|strong|em)>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -419,14 +439,14 @@ function extractStampInfoFromHtml(html) {
 
   // ── TITLE ──
   const h1Match = cleanHtml.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
-  if (h1Match) title = h1Match[1].replace(/<[^>]+>/g, '').trim();
+  if (h1Match) title = htmlToText(h1Match[1]);
   if (!title) {
     const titleSelectors = ['.title', '.name', 'h2', 'h3', '.stamp-title', '[itemprop="name"]'];
     for (const sel of titleSelectors) {
       const re = new RegExp('<' + sel.replace(/[[\]]/g, '') + '[^>]*>([\\s\\S]*?)<\\/' + sel.replace(/[[\]]/g, '').split(' ')[0] + '>', 'i');
       const m = cleanHtml.match(re);
       if (m) {
-        const text = m[1].replace(/<[^>]+>/g, '').trim();
+        const text = htmlToText(m[1]);
         if (text && text.length > 1 && text.length < 200) { title = text; break; }
       }
     }
@@ -434,7 +454,7 @@ function extractStampInfoFromHtml(html) {
   if (!title) {
     const titleTagMatch = cleanHtml.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
     if (titleTagMatch) {
-      const rawTitle = titleTagMatch[1].replace(/<[^>]+>/g, '').trim();
+      const rawTitle = htmlToText(titleTagMatch[1]);
       const parts = rawTitle.split(/[·•|—–]/);
       if (parts.length >= 2) {
         title = parts.find(p => p.trim() && !/^MG[A-Z]?\d+$/i.test(p.trim()) && !/GÜVENTÜRK|KOLEKSİYON/i.test(p.trim())) || '';
@@ -449,7 +469,7 @@ function extractStampInfoFromHtml(html) {
   const subMatch = cleanHtml.match(/<div\s+class="subtitle"[^>]*>([\s\S]*?)<\/div>/i)
     || cleanHtml.match(/<div\s+class="sub"[^>]*>([\s\S]*?)<\/div>/i)
     || cleanHtml.match(/<div\s+class="description"[^>]*>([\s\S]*?)<\/div>/i);
-  if (subMatch) subtitle = subMatch[1].replace(/<[^>]+>/g, '').trim();
+  if (subMatch) subtitle = htmlToText(subMatch[1]);
 
   // ── IMAGE ──
   const imgMatch = cleanHtml.match(/<img\s+src="(data:image\/[^"]+)"/i);
@@ -491,13 +511,23 @@ function extractStampInfoFromHtml(html) {
     nominalDeger = nominalDeger.replace(/^(değer|değeri|deger|nominal|bedel|kiymet|fiyat|tutar|birim)[:\s]+/i, '').trim();
   }
 
-  // ── COUNTRY ──
-  const countryInfo = STAMP_COUNTRIES.find(c => c.keywords.some(kw => textHasCountryKeyword(scanText, kw)));
-  if (countryInfo) country = countryInfo.name;
-  if (!country) {
-    const tableCountry = findKey('ülke', 'ulke', 'country', 'menşe', 'mense', 'menşei', 'origin', 'devlet', 'state');
-    if (tableCountry) country = extractCountryFromText(tableCountry) || tableCountry;
+  // ── COUNTRY: explicit table row first, then title, then full-text keywords ──
+  // Tablo değeri bilinen bir ülkeye çözümlenemiyorsa (örn. "Türkiye · Türkiye
+  // Kızılay Gençliği") ham metin hemen adopt edilmez; önce title/tam metin
+  // taranır, ham değer en son çare olarak kullanılır.
+  const tableCountry = findKey('ülke', 'ulke', 'country', 'menşe', 'mense', 'menşei', 'origin', 'devlet', 'state');
+  if (tableCountry) {
+    const resolvedTableCountry = extractCountryFromText(tableCountry)
+      || (/osmanl/i.test(tableCountry) ? 'Osmanlı İmp.' : '')
+      || (/türk|turk/i.test(tableCountry) ? 'Türkiye Cumhuriyeti' : '');
+    if (resolvedTableCountry) country = resolvedTableCountry;
   }
+  if (!country && title) country = extractCountryFromText(title);
+  if (!country) {
+    const countryInfo = STAMP_COUNTRIES.find(c => c.keywords.some(kw => textHasCountryKeyword(scanText, kw)));
+    if (countryInfo) country = countryInfo.name;
+  }
+  if (!country && tableCountry) country = tableCountry;
 
   // ── YEAR ──
   if (title) {

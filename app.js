@@ -27,9 +27,12 @@ const CONFIG = {
 };
 
 // ─── STAMP COUNTRIES ────────────────────────────────────────────────────────
+// Türkiye Cumhuriyeti Osmanlı'dan ÖNCE kontrol edilir: TC dönemi sayfalarda
+// geçmişe yapılan "Osmanlı" atıfları (Osmanlı Bankası, Osmanlı'dan devralınan, vb.)
+// yanlış şekilde Osmanlı kazanmasın (commit 3ca1d11 niyeti).
 const STAMP_COUNTRIES = [
-  { name: 'Osmanlı İmp.', keywords: ['osmanlı', 'ottoman', 'imp.', 'imparatorlugu', 'imparatorluğu'] },
   { name: 'Türkiye Cumhuriyeti', keywords: ['türkiye cumhuriyeti', 'turkiye cumhuriyeti', 'tc ', 't.c.', 'cumhuriyet', 'tayyare', 'cemiyeti', 'thk', 'türk hava', 'hava kurumu', 'ptt', 'posta ve telgraf', 'demiryolları', 'tcdd'] },
+  { name: 'Osmanlı İmp.', keywords: ['osmanlı', 'ottoman', 'imp.', 'imparatorlugu', 'imparatorluğu'] },
   { name: 'Birleşik Krallık', keywords: ['birleşik krallık', 'birlesik krallik', 'united kingdom', 'uk ', 'great britain', 'ingiltere', 'england'] },
   { name: 'Almanya', keywords: ['almanya', 'germany', 'deutschland', 'bundespost', 'ddr'] },
   { name: 'ABD', keywords: ['abd', 'usa', 'united states', 'amerika'] },
@@ -891,16 +894,24 @@ function extractStampInfoFromHtml(html) {
   }
 
   // ── 2. TITLE: <h1> first, then fallbacks ──
+  // innerHTML üzerinden düz metin: <br> textContent'te boşluk üretmez,
+  // "Türkiye Cumhuriyeti1 Kuruş" gibi birleşmiş başlıkları engelle.
+  const elToPlainText = el => {
+    const s = el.innerHTML.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const ta = document.createElement('textarea');
+    ta.innerHTML = s;
+    return ta.value.trim();
+  };
   const h1El = doc.querySelector('h1');
   if (h1El) {
-    title = h1El.textContent.trim();
+    title = elToPlainText(h1El);
   }
   if (!title) {
     const titleSelectors = ['.title', '.name', 'h2', 'h3', '.stamp-title', '[itemprop="name"]'];
     for (const sel of titleSelectors) {
       const el = doc.querySelector(sel);
       if (el) {
-        const text = el.textContent.trim();
+        const text = elToPlainText(el);
         if (text && text.length > 1 && text.length < 200) { title = text; break; }
       }
     }
@@ -921,7 +932,7 @@ function extractStampInfoFromHtml(html) {
 
   // ── 3. SUBTITLE: .subtitle element ──
   const subEl = doc.querySelector('.subtitle, .sub, .description, .detail, .info');
-  if (subEl) subtitle = subEl.textContent.trim();
+  if (subEl) subtitle = elToPlainText(subEl);
 
   // ── 4. IMAGE: first <img> src ──
   const imgEl = doc.querySelector('img');
@@ -999,13 +1010,21 @@ function extractStampInfoFromHtml(html) {
     nominalDeger = nominalDeger.replace(/^(değer|değeri|deger|nominal|bedel|kiymet|fiyat|tutar|birim)[:\s]+/i, '').trim();
   }
 
-  // ── 6. ÜLKE: extract from text using known country keywords ──
-  const countryInfo = STAMP_COUNTRIES.find(c => c.keywords.some(kw => textHasCountryKeyword(scanText, kw)));
-  if (countryInfo) country = countryInfo.name;
-  // Fallback: table data
+  // ── 6. ÜLKE: explicit table row first, then title, then full-text keywords ──
+  // Tablo satırı serbest metindeki arıza ("Osmanlı Bankası" vb.) referanslarından
+  // daha otoriterdir; tablo değeri bilinen ülkeye çözümlenemiyorsa ham metin
+  // hemen adopt edilmez, önce title/tam metin taranır.
+  const tableCountry = findTableValue('ülke', 'ulke', 'country', 'menşe', 'mense', 'menşei', 'origin', 'devlet', 'state');
+  if (tableCountry) {
+    const resolvedTableCountry = extractCountryFromText(tableCountry)
+      || (/osmanl/i.test(tableCountry) ? 'Osmanlı İmp.' : '')
+      || (/türk|turk/i.test(tableCountry) ? 'Türkiye Cumhuriyeti' : '');
+    if (resolvedTableCountry) country = resolvedTableCountry;
+  }
+  if (!country && title) country = extractCountryFromText(title);
   if (!country) {
-    const tableCountry = findTableValue('ülke', 'ulke', 'country', 'menşe', 'mense', 'menşei', 'origin', 'devlet', 'state');
-    if (tableCountry) country = extractCountryFromText(tableCountry) || tableCountry;
+    const countryInfo = STAMP_COUNTRIES.find(c => c.keywords.some(kw => textHasCountryKeyword(scanText, kw)));
+    if (countryInfo) country = countryInfo.name;
   }
   // Fallback: scan all table cells for country names
   if (!country) {
@@ -1018,6 +1037,8 @@ function extractStampInfoFromHtml(html) {
       if (country) break;
     }
   }
+  // Last resort: raw table value
+  if (!country && tableCountry) country = tableCountry;
 
   // ── 7. BASIM YILI: extract from text ──
   // Try title first for year (more reliable)
