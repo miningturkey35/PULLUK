@@ -53,6 +53,16 @@ const STAMP_COUNTRY_ABBREVS = {
   'Çin': 'ÇİN',
 };
 
+// Kelime sınırlı anahtar kelime eşleşmesi: 'çocuk' içinde 'uk ', 'için' içinde 'çin',
+// 'abdal' içinde 'abd' gibi alt dizin yanlış eşleşmelerini engeller.
+function textHasCountryKeyword(text, kw) {
+  const k = kw.trim();
+  if (!k || !text) return false;
+  const esc = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const word = 'a-z0-9_çğıöşü';
+  return new RegExp(`(?<![${word}])${esc}(?![${word}])`, 'i').test(text);
+}
+
 // ─── PUL TİPLERİ (izin verilen değerler) ──────────────────────────────────────
 const PUL_TIPLERI = [
   'Posta Pulu',
@@ -272,27 +282,13 @@ function buildStampCodeBadge(code, country, year) {
 
 function extractCountryFromText(text) {
   if (!text) return '';
-  const lower = text.toLowerCase();
+  const lower = text.toLowerCase().replace(/\u0307/g, '');
   // Check more specific terms first to avoid false matches
   for (const c of STAMP_COUNTRIES) {
     for (const kw of c.keywords) {
-      // Use word-boundary matching to avoid false positives like 'uk ' matching inside 'çocuk '
-      const kwEscaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const kwRegex = new RegExp('\\b' + kwEscaped, 'i');
-      if (kwRegex.test(lower)) return c.name;
+      if (textHasCountryKeyword(lower, kw)) return c.name;
     }
   }
-  // Additional fallback patterns
-  if (/\bt\.c\.\b|\btürkiye cumhuriyeti\b|\bturkiye cumhuriyeti\b|\btayyare\b|\bcemiyeti\b|\bthk\b|\btürk hava\b|\bhava kurumu\b|\bptt\b|\bposta ve telgraf\b|\bdemiryolları\b|\btcdd\b/.test(lower)) return 'Türkiye Cumhuriyeti';
-  if (/\bosmanlı\b|\bottoman\b/.test(lower)) return 'Osmanlı İmp.';
-  if (/\bingiltere\b|\bengland\b|\bgreat britain\b|\bunited kingdom\b|\buk\b/.test(lower)) return 'Birleşik Krallık';
-  if (/\balmanya\b|\bgermany\b|\bdeutschland\b/.test(lower)) return 'Almanya';
-  if (/\babd\b|\busa\b|\bunited states\b|\bamerika\b/.test(lower)) return 'ABD';
-  if (/\bfransa\b|\bfrance\b/.test(lower)) return 'Fransa';
-  if (/\bitalya\b|\bitaly\b|\bitalia\b/.test(lower)) return 'İtalya';
-  if (/\brusya\b|\brussia\b|\bsssr\b|\bcccp\b|\bsoviet\b/.test(lower)) return 'Rusya';
-  if (/\bjaponya\b|\bjapan\b/.test(lower)) return 'Japonya';
-  if (/\bçin\b|\bchin\b|\bchina\b/.test(lower)) return 'Çin';
   return '';
 }
 
@@ -825,7 +821,7 @@ function extractStampInfoFromHtml(html) {
   // Collect ALL visible text from the page for pattern scanning
   const bodyText = doc.body ? doc.body.textContent || '' : '';
   const allText = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-  const scanText = (bodyText + ' ' + allText).toLowerCase();
+  const scanText = (bodyText + ' ' + allText).toLowerCase().replace(/\u0307/g, '');
 
   // ── 0. TABLE KEY-VALUE EXTRACTION (broad mapping) ──
   const tableData = {};
@@ -1004,7 +1000,7 @@ function extractStampInfoFromHtml(html) {
   }
 
   // ── 6. ÜLKE: extract from text using known country keywords ──
-  const countryInfo = STAMP_COUNTRIES.find(c => c.keywords.some(kw => scanText.includes(kw)));
+  const countryInfo = STAMP_COUNTRIES.find(c => c.keywords.some(kw => textHasCountryKeyword(scanText, kw)));
   if (countryInfo) country = countryInfo.name;
   // Fallback: table data
   if (!country) {
@@ -1015,9 +1011,9 @@ function extractStampInfoFromHtml(html) {
   if (!country) {
     const cells = doc.querySelectorAll('td, th');
     for (const cell of cells) {
-      const t = cell.textContent.trim().toLowerCase();
+      const t = cell.textContent.trim().toLowerCase().replace(/\u0307/g, '');
       for (const c of STAMP_COUNTRIES) {
-        if (c.keywords.some(kw => t.includes(kw))) { country = c.name; break; }
+        if (c.keywords.some(kw => textHasCountryKeyword(t, kw))) { country = c.name; break; }
       }
       if (country) break;
     }
@@ -1643,7 +1639,7 @@ function extractPlakInfoFromHtml(html) {
   const doc = parser.parseFromString(cleanHtml, 'text/html');
   const bodyText = doc.body ? doc.body.textContent || '' : '';
   const allText = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-  const scanText = (bodyText + ' ' + allText).toLowerCase();
+  const scanText = (bodyText + ' ' + allText).toLowerCase().replace(/\u0307/g, '');
 
   let title = '', subtitle = '', image = '', code = '';
   let artist = '', album = '', plakSirketi = '', katalogNo = '', year = '', format = '', country = '';
@@ -2086,9 +2082,7 @@ async function saveFileToCache(file) {
       _dil: file._dil,
       _tur: file._tur,
       _marka: file._marka,
-      _model: file._model,
       _deste: file._deste,
-      _ulke: file._ulke,
       _kartSayisi: file._kartSayisi,
       _boyut: file._boyut,
       _indeks: file._indeks
@@ -2127,9 +2121,10 @@ async function processPreviewQueue() {
         if (file._htmlContent) {
           const reExtracted = extractStampInfoFromHtml(file._htmlContent);
           let changed = false;
-          // Always re-normalize country from htmlContent (may be stale in cache)
-          if (reExtracted.country) {
-            const normalized = normalizeCountryName(reExtracted.country);
+          // Always re-normalize country from htmlContent (may be stale in cache).
+          // htmlContent kaynaktır: yanlış/eski ülke boş sonucla bile ezilir (poison cache temizliği).
+          {
+            const normalized = normalizeCountryName(reExtracted.country || '');
             if (file._country !== normalized) { file._country = normalized; changed = true; }
             if (file._ulke !== normalized) { file._ulke = normalized; changed = true; }
           }
@@ -2221,8 +2216,8 @@ async function processPreviewQueue() {
         if (gallery && gallery.id === 'allother' && file._htmlContent) {
           const alloData = extractStampInfoFromHtml(file._htmlContent);
           let changed = false;
-          if (alloData.country) {
-            const normalized = normalizeCountryName(alloData.country);
+          {
+            const normalized = normalizeCountryName(alloData.country || '');
             if (file._country !== normalized) { file._country = normalized; changed = true; }
             if (file._ulke !== normalized) { file._ulke = normalized; changed = true; }
           }
@@ -2242,7 +2237,7 @@ async function processPreviewQueue() {
           const iskData = extractIskambilInfoFromHtml(file._htmlContent);
           file._marka = iskData.marka;
           file._deste = iskData.deste;
-          file._ulke = iskData.ulke;
+          file._ulke = iskData.ulke || file._ulke;
           file._durum = iskData.durum || file._durum;
           file._basimYili = iskData.basimYili || file._basimYili;
           file._kartSayisi = iskData.kartSayisi;
@@ -2266,9 +2261,10 @@ async function processPreviewQueue() {
         if (file._htmlContent) {
           const reExtracted = extractStampInfoFromHtml(file._htmlContent);
           let changed = false;
-          // Always re-normalize country from htmlContent (may be stale in cache)
-          if (reExtracted.country) {
-            const normalized = normalizeCountryName(reExtracted.country);
+          // Always re-normalize country from htmlContent (may be stale in cache).
+          // htmlContent kaynaktır: yanlış/eski ülke boş sonucla bile ezilir (poison cache temizliği).
+          {
+            const normalized = normalizeCountryName(reExtracted.country || '');
             if (file._country !== normalized) { file._country = normalized; changed = true; }
             if (file._ulke !== normalized) { file._ulke = normalized; changed = true; }
           }
@@ -2366,8 +2362,8 @@ async function processPreviewQueue() {
         if (gallery && gallery.id === 'allother' && file._htmlContent) {
           const alloData = extractStampInfoFromHtml(file._htmlContent);
           let changed = false;
-          if (alloData.country) {
-            const normalized = normalizeCountryName(alloData.country);
+          {
+            const normalized = normalizeCountryName(alloData.country || '');
             if (file._country !== normalized) { file._country = normalized; changed = true; }
             if (file._ulke !== normalized) { file._ulke = normalized; changed = true; }
           }
@@ -2387,7 +2383,7 @@ async function processPreviewQueue() {
           const iskData = extractIskambilInfoFromHtml(file._htmlContent);
           file._marka = iskData.marka;
           file._deste = iskData.deste;
-          file._ulke = iskData.ulke;
+          file._ulke = iskData.ulke || file._ulke;
           file._durum = iskData.durum || file._durum;
           file._basimYili = iskData.basimYili || file._basimYili;
           file._kartSayisi = iskData.kartSayisi;
@@ -2444,12 +2440,13 @@ async function processPreviewQueue() {
         file._subtitle = extracted.subtitle;
         file._image = extracted.image;
         file._code = extracted.code || file._code;
-        file._country = extracted.country;
+        // htmlContent kaynaktır: taze çıkarma boşsa bayat/poison değeri ez (serbest temizliği)
+        file._country = extracted.country || '';
         file._year = extracted.year;
         file._nominal = extracted.nominalDeger;
         file._pulTipi = extracted.pulTipi;
         file._katalogNo = extracted.katalogNo || file._code || file._katalogNo;
-        file._ulke = extracted.ulke;
+        file._ulke = extracted.ulke || file._country || '';
         file._basimYili = extracted.basimYili;
         file._basimYeri = extracted.basimYeri;
         file._nominalDeger = extracted.nominalDeger;
@@ -2538,7 +2535,7 @@ async function processPreviewQueue() {
           const iskData = extractIskambilInfoFromHtml(html);
           file._marka = iskData.marka;
           file._deste = iskData.deste;
-          file._ulke = iskData.ulke;
+          file._ulke = iskData.ulke || file._ulke;
           file._durum = iskData.durum || file._durum;
           file._basimYili = iskData.basimYili || file._basimYili;
           file._kartSayisi = iskData.kartSayisi;
@@ -2552,6 +2549,7 @@ async function processPreviewQueue() {
         }
 
         saveFileToCache(file);
+        file._needsRefresh = false;
         updateCardUI(item);
         if (gallery) gallery.checkAndExtractCategory(file, card);
       } catch (err) {
@@ -2642,6 +2640,29 @@ async function processPreviewQueue() {
 }
 
 function updateCardUI(item) {
+  // renderGallery() kuyruk işlenmeden kartları silip yeniden oluşturmuş olabilir;
+  // bayat DOM referansları yerine güncel kartı file id ile yeniden bağla.
+  if (item.card && !item.card.isConnected && item.file && item.file.id) {
+    const fresh = document.querySelector(`[data-file-id="${item.file.id}"]`);
+    if (!fresh) return;
+    item.card = fresh;
+    item.titleEl = fresh.querySelector('.card-title-el') || fresh.querySelector('.pdf-card-title-value');
+    item.subEl = fresh.querySelector('.card-sub-el') || fresh.querySelector('.plak-field-artist .pdf-card-field__value');
+    item.imgEl = fresh.querySelector('.card-img-el');
+    item.fallbackEl = fresh.querySelector('.card-fallback-el') || fresh.querySelector('.card-placeholder-el');
+    item.codeEl = fresh.querySelector('.card-code-el');
+    item.koleksiyonEl = fresh.querySelector('.card-koleksiyon-el');
+    item.ulkeEl = fresh.querySelector('.card-ulke-el');
+    item.yilEl = fresh.querySelector('.card-yil-el');
+    item.nominalEl = fresh.querySelector('.card-nominal-el');
+    item.tipiEl = fresh.querySelector('.card-tipi-el');
+    item.durumEl = fresh.querySelector('.card-durum-el');
+    item.brandEl = fresh.querySelector('.diecast-label__brand');
+    item.badgeBrandEl = fresh.querySelector('.diecast-badge--brand');
+    item.badgeYearEl = fresh.querySelector('.diecast-badge--year');
+    item.badgeCodeEl = fresh.querySelector('.diecast-badge--code');
+    item.h3El = fresh.querySelector('.diecast-card__model');
+  }
   const { file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, isDiecast, brandEl, yearEl, badgeBrandEl, badgeYearEl, badgeCodeEl, h3El, koleksiyonEl, ulkeEl, yilEl, nominalEl, tipiEl, durumEl, galleryId } = item;
   console.log(`[PULLUK] updateCardUI for ${file.name}:`, { _title: file._title, _code: file._code, _country: file._country, _year: file._year, _nominalDeger: file._nominalDeger, _pulTipi: file._pulTipi, _durum: file._durum, koleksiyonEl: !!koleksiyonEl, ulkeEl: !!ulkeEl });
 
@@ -2675,7 +2696,7 @@ function updateCardUI(item) {
 
   // Update 5-field stamp card content
   if (!isDiecast && card) {
-    const country = file._country || '';
+    const country = file._country || file._ulke || '';
     const year = file._year || '';
     const titleText = file._title || '';
     const subtitleText = file._subtitle || '';
@@ -3410,7 +3431,7 @@ class GalleryManager {
     const isAllother = (galleryId === 'allother');
     const needsExtraction = file._needsRefresh || !file._htmlContent || (isBasilsanat ? (!file._title || !file._image || !file._tur || !file._yazar) : isAllother ? (!file._title || !file._image) : (!file._title || !file._image));
     if (!file.isMock && needsExtraction && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
-      if (CONFIG.GOOGLE_API_KEY.trim()) {
+      if (CONFIG.GOOGLE_API_KEY.trim() && !previewQueue.some(q => q.file === file)) {
         console.log(`[PULLUK] createPdfCard: pushing ${file.name} to previewQueue`);
         previewQueue.push({ file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, gallery: this, koleksiyonEl, ulkeEl, yilEl, nominalEl, tipiEl, durumEl, galleryId });
         processPreviewQueue();
@@ -3537,7 +3558,7 @@ class GalleryManager {
 
     // Queue for preview extraction if we don't have full data yet
     if (!file.isMock && (file._needsRefresh || !file._htmlContent || !file._artist || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
-      if (CONFIG.GOOGLE_API_KEY.trim()) {
+      if (CONFIG.GOOGLE_API_KEY.trim() && !previewQueue.some(q => q.file === file)) {
         previewQueue.push({ file, titleEl, subEl, imgEl, fallbackEl, codeEl: null, card, gallery: this, koleksiyonEl: null, ulkeEl: null, yilEl: null, nominalEl: null, tipiEl: null, galleryId: 'plak' });
         processPreviewQueue();
       }
@@ -3648,7 +3669,7 @@ class GalleryManager {
     const titleEl = card.querySelector('.pdf-card-title-value');
 
     if (!file.isMock && (file._needsRefresh || !file._htmlContent || !file._image || !file._setName) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
-      if (CONFIG.GOOGLE_API_KEY.trim()) {
+      if (CONFIG.GOOGLE_API_KEY.trim() && !previewQueue.some(q => q.file === file)) {
         previewQueue.push({ file, titleEl, subEl: null, imgEl, fallbackEl, codeEl: null, card, gallery: this, koleksiyonEl: null, ulkeEl: null, yilEl: null, nominalEl: null, tipiEl: null, galleryId: 'legoverse' });
         processPreviewQueue();
       }
@@ -3755,7 +3776,7 @@ class GalleryManager {
     const h3El = card.querySelector('.diecast-card__model');
 
     if (!file.isMock && (file._needsRefresh || !file._htmlContent || !file._title || !file._image) && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
-      if (CONFIG.GOOGLE_API_KEY.trim()) {
+      if (CONFIG.GOOGLE_API_KEY.trim() && !previewQueue.some(q => q.file === file)) {
         previewQueue.push({ file, imgEl, fallbackEl: placeholderEl, card, gallery: this, isDiecast: true, brandEl, badgeBrandEl, badgeYearEl, badgeCodeEl, h3El });
         processPreviewQueue();
       }

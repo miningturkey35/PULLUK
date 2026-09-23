@@ -51,6 +51,16 @@ const STAMP_COUNTRIES = [
   { name: 'Çin', keywords: ['çin', 'chin', 'china'] },
 ];
 
+// Kelime sınırlı anahtar kelime eşleşmesi: 'çocuk' içinde 'uk ', 'için' içinde 'çin',
+// 'abdal' içinde 'abd' gibi alt dizin yanlış eşleşmelerini engeller.
+function textHasCountryKeyword(text, kw) {
+  const k = kw.trim();
+  if (!k || !text) return false;
+  const esc = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const word = 'a-z0-9_çğıöşü';
+  return new RegExp(`(?<![${word}])${esc}(?![${word}])`, 'i').test(text);
+}
+
 // ─── PUL TIPI MAP ──────────────────────────────────────────────────────────
 const PUL_TIPLERI = [
   'Posta Pulu', 'Damga Pulu', 'Vergi Pulu', 'Gazete Pulu', 'Resmî Pul',
@@ -155,24 +165,12 @@ function stripPatterns(str) {
 
 function extractCountryFromText(text) {
   if (!text) return '';
-  const lower = text.toLowerCase();
+  const lower = text.toLowerCase().replace(/\u0307/g, '');
   for (const c of STAMP_COUNTRIES) {
     for (const kw of c.keywords) {
-      const kwEscaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const kwRegex = new RegExp('\\b' + kwEscaped, 'i');
-      if (kwRegex.test(lower)) return c.name;
+      if (textHasCountryKeyword(lower, kw)) return c.name;
     }
   }
-  if (/\bt\.c\.\b|\btürkiye cumhuriyeti\b|\bturkiye cumhuriyeti\b|\btayyare\b|\bcemiyeti\b|\bthk\b|\btürk hava\b|\bhava kurumu\b|\bptt\b|\bposta ve telgraf\b|\bdemiryolları\b|\btcdd\b/.test(lower)) return 'Türkiye Cumhuriyeti';
-  if (/\bosmanlı\b|\bottoman\b/.test(lower)) return 'Osmanlı İmp.';
-  if (/\bingiltere\b|\bengland\b|\bgreat britain\b|\bunited kingdom\b|\buk\b/.test(lower)) return 'Birleşik Krallık';
-  if (/\balmanya\b|\bgermany\b|\bdeutschland\b/.test(lower)) return 'Almanya';
-  if (/\babd\b|\busa\b|\bunited states\b|\bamerika\b/.test(lower)) return 'ABD';
-  if (/\bfransa\b|\bfrance\b/.test(lower)) return 'Fransa';
-  if (/\bitalya\b|\bitaly\b|\bitalia\b/.test(lower)) return 'İtalya';
-  if (/\brusya\b|\brussia\b|\bsssr\b|\bcccp\b|\bsoviet\b/.test(lower)) return 'Rusya';
-  if (/\bjaponya\b|\bjapan\b/.test(lower)) return 'Japonya';
-  if (/\bçin\b|\bchin\b|\bchina\b/.test(lower)) return 'Çin';
   return '';
 }
 
@@ -391,7 +389,7 @@ function extractStampInfoFromHtml(html) {
   let basimYili = '', basimYeri = '', ozet = '', durum = '';
 
   const allText = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-  const scanText = allText.toLowerCase();
+  const scanText = allText.toLowerCase().replace(/\u0307/g, '');
 
   // ── TABLE DATA ──
   const tableData = extractTableData(html);
@@ -494,7 +492,7 @@ function extractStampInfoFromHtml(html) {
   }
 
   // ── COUNTRY ──
-  const countryInfo = STAMP_COUNTRIES.find(c => c.keywords.some(kw => scanText.includes(kw)));
+  const countryInfo = STAMP_COUNTRIES.find(c => c.keywords.some(kw => textHasCountryKeyword(scanText, kw)));
   if (countryInfo) country = countryInfo.name;
   if (!country) {
     const tableCountry = findKey('ülke', 'ulke', 'country', 'menşe', 'mense', 'menşei', 'origin', 'devlet', 'state');
@@ -810,7 +808,7 @@ function extractPlakInfoFromHtml(html) {
     .replace(/<script[\s\S]*?<\/script>/gi, '');
 
   const allText = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-  const scanText = allText.toLowerCase();
+  const scanText = allText.toLowerCase().replace(/\u0307/g, '');
 
   let title = '', subtitle = '', image = '', code = '';
   let artist = '', album = '', plakSirketi = '', katalogNo = '', year = '', format = '', country = '';
