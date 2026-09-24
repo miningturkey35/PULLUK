@@ -822,7 +822,13 @@ function extractStampInfoFromHtml(html) {
   let durum = '';
 
   // Collect ALL visible text from the page for pattern scanning
-  const bodyText = doc.body ? doc.body.textContent || '' : '';
+  // <br> glued by textContent ("Posta Pulu0.50") hides pattern matches — insert spaces first
+  let bodyText = '';
+  if (doc.body) {
+    const bodyClone = doc.body.cloneNode(true);
+    bodyClone.querySelectorAll('br').forEach(br => br.replaceWith(' '));
+    bodyText = bodyClone.textContent || '';
+  }
   const allText = cleanHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
   const scanText = (bodyText + ' ' + allText).toLowerCase().replace(/\u0307/g, '');
 
@@ -1068,25 +1074,6 @@ function extractStampInfoFromHtml(html) {
   if (!basimYili && year) basimYili = year;
 
   // ── 8. PUL TİPİ: extract from text ──
-  // First, check title for definitive/definitif keywords (high confidence)
-  if (title) {
-    const titleLower = title.toLowerCase();
-    if (/\bdefinitive\b|\bdefinitif\b|\badi\s+pul/i.test(titleLower)) {
-      pulTipi = 'Posta Pulu';
-    }
-  }
-  // Check for "****" pattern which indicates Damga Pulu
-  const asteriskDamga = allText.match(/\*{4,}/);
-  if (asteriskDamga) {
-    pulTipi = 'Damga Pulu';
-  }
-  // Check for "damga" keyword (with optional "fiscal" nearby)
-  if (!pulTipi) {
-    const damgaMatch = allText.match(/\b(fiscal\s+)?damga\b/i);
-    if (damgaMatch) {
-      pulTipi = 'Damga Pulu';
-    }
-  }
   const stampTypePatterns = [
     // çok kelimeli tipler önce
     /\b(hazır\s+antetli|ılk\s+gün|prime\s+cover|first\s+day|air\s*mail|posta\s+havalesi|kargo\s+pulu|posta\s+kutusu|posta\s+kasası)\b/i,
@@ -1097,34 +1084,70 @@ function extractStampInfoFromHtml(html) {
     // fallback: sadece "pul" kelimesi varsa tip bulamadık
     /\b(pul)\b/i
   ];
-  if (!pulTipi) {
+  // 1) Explicit table row (authoritative): beats free-text keyword scan
+  const tableTypeRow = findTableValue('pul tipi', 'türü', 'tür', 'tur', 'tip', 'type', 'kategori', 'category');
+  if (tableTypeRow) {
     for (const pat of stampTypePatterns) {
+      const tm = tableTypeRow.toLowerCase().match(pat);
+      if (tm) { pulTipi = tm[1] || tm[0]; break; }
+    }
+    if (!pulTipi && /^(posta|damga|vergi|harç|anma|konulu|tematik|hatıra|resim|adi|resmi|derleme|emisyon|blok)/i.test(tableTypeRow)) {
+      pulTipi = tableTypeRow;
+    }
+  }
+  // 2) Title: definitive/definitif keywords (high confidence)
+  if (!pulTipi && title) {
+    const titleLower = title.toLowerCase();
+    if (/\bdefinitive\b|\bdefinitif\b|\badi\s+pul/i.test(titleLower)) {
+      pulTipi = 'Posta Pulu';
+    }
+  }
+  // 3) "****" pattern indicates Damga Pulu
+  if (!pulTipi && allText.match(/\*{4,}/)) {
+    pulTipi = 'Damga Pulu';
+  }
+  // 4) Specific type patterns on body text ("posta pulu", "damga pulu", "fiscal", ...) — outrank bare keyword
+  if (!pulTipi) {
+    for (const pat of stampTypePatterns.slice(0, 3)) {
       const tm = scanText.match(pat);
       if (tm) { pulTipi = tm[1] || tm[0]; break; }
     }
   }
-  // Fallback: try subtitle
+  // 5) Specific type patterns on subtitle
   if (!pulTipi && subtitle) {
-    for (const pat of stampTypePatterns) {
+    for (const pat of stampTypePatterns.slice(0, 3)) {
       const tm = subtitle.toLowerCase().match(pat);
       if (tm) { pulTipi = tm[1] || tm[0]; break; }
     }
   }
-  // Fallback: scan table cells
+  // 6) Bare "damga" keyword — weaker signal; skip condition/printing contexts
+  //    (damga izi, damga kalıntısı, damga matbaası, damga yoğunluğu, damga mevcuttur)
+  if (!pulTipi && /\b(fiscal\s+)?damga\b(?!\s*(?:[iİ]z|kalıntı|matbaa|yoğunl|mevcut))/i.test(allText)) {
+    pulTipi = 'Damga Pulu';
+  }
+  // 7) Generic "pul" fallback
   if (!pulTipi) {
-    const tableTip = findTableValue('pul tipi', 'tip', 'type', 'tür', 'tur', 'kategori', 'category', 'seri', 'konu', 'nominal değer', 'nominal');
+    const tm = scanText.match(stampTypePatterns[3]);
+    if (tm) pulTipi = tm[1] || tm[0];
+  }
+  if (!pulTipi && subtitle) {
+    const tm = subtitle.toLowerCase().match(stampTypePatterns[3]);
+    if (tm) pulTipi = tm[1] || tm[0];
+  }
+  // 8) Fallback: broader table scan (seri/konu/nominal etc.)
+  if (!pulTipi) {
+    const tableTip = findTableValue('seri', 'konu', 'nominal değer', 'nominal');
     if (tableTip) {
-      // Try to extract stamp type from the table value
       for (const pat of stampTypePatterns) {
         const tm = tableTip.toLowerCase().match(pat);
         if (tm) { pulTipi = tm[1] || tm[0]; break; }
       }
-      // If no pattern matched, use the raw value if it looks like a stamp type
       if (!pulTipi && /^(posta|damga|vergi|harç|anma|konulu|tematik|hatıra|resim|adi|resmi|derleme|emisyon|blok)/i.test(tableTip)) {
         pulTipi = tableTip;
       }
     }
   }
+  // 9) Fallback: scan table cells
   if (!pulTipi) {
     const cells = doc.querySelectorAll('td, th');
     for (const cell of cells) {
@@ -1993,7 +2016,7 @@ function extractLegoverseInfoFromHtml(html) {
 }
 
 const DB_NAME = 'PullukDB';
-const DB_VERSION = 15; // v15: clear cache after koleksiyon no (katalogNo) extraction fix
+const DB_VERSION = 16; // v16: clear cache after pulTipi table-first extraction fix
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const STORE_NAME = 'fileCache';
 

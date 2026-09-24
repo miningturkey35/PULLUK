@@ -551,39 +551,65 @@ function extractStampInfoFromHtml(html) {
   if (!basimYili && year) basimYili = year;
 
   // ── PUL TİPİ ──
-  // First, check title for definitive/definitif keywords (high confidence)
-  if (title) {
-    const titleLower = title.toLowerCase();
-    if (/\bdefinitive\b|\bdefinitif\b|\badi\s+pul/i.test(titleLower)) {
-      pulTipi = 'Posta Pulu';
-    }
-  }
-  if (allText.match(/\*{4,}/)) {
-    pulTipi = 'Damga Pulu';
-  }
-  if (!pulTipi && /\b(fiscal\s+)?damga\b/i.test(allText)) {
-    pulTipi = 'Damga Pulu';
-  }
   const stampTypePatterns = [
     /\b(hazır\s+antetli|ılk\s+gün|prime\s+cover|first\s+day|air\s*mail|posta\s+havalesi|kargo\s+pulu|posta\s+kutusu|posta\s+kasası)\b/i,
     /\b(vergi\s+pulu|vergi\s+pul|harç\s+pulu|harç\s+pul|damga\s+pulu|damga\s+pul|posta\s+pulu|posta\s+pul|anma\s+pulu|anma\s+pul|konulu\s+pulu|konulu\s+pul|tematik\s+pulu|tematik\s+pul|hatıra\s+pulu|hatıra\s+pul|anı\s+pulu|anı\s+pul|resim\s+pulu|resim\s+pul|adi\s+pulu|adi\s+pul|tellaloğlu|davalık|mühürlü|derleme|emisyon|blok|souvenir|sheet|minyatür|minyatur|çapa|kepçe|perforasyon|perforasyonlu|perforasyonsuz|gümrük|gumruk|telegraph|telgraf|parsel|paket|hava\s+postası|hava\s+postasi|express|ekspres|resmi|resmî|resmi\s+pulu|resmi\s+pul|yetki|yetki\s+pulu|yetki\s+pul|resmî\s+pulu|resmi\s+pulu)\b/i,
     /\b(commemorative|definitive|posta\s+pulu|posta\s+pul|revenue|cinderella|charity|charity\s+stamp|airmail|air\s+mail|postage|fiscal|official|semi-postal|semi\s+postal|postage\s+due|postage-due|registration|registered|express|special\s+delivery|parcel|package|newspaper|newspaper\s+stamp|telegraph|telegram)\b/i,
     /\b(pul)\b/i,
   ];
-  if (!pulTipi) {
+  // 1) Explicit table row (authoritative): beats free-text keyword scan
+  const tableTypeRow = findKey('pul tipi', 'türü', 'tür', 'tur', 'tip', 'type', 'kategori', 'category');
+  if (tableTypeRow) {
     for (const pat of stampTypePatterns) {
+      const tm = tableTypeRow.toLowerCase().match(pat);
+      if (tm) { pulTipi = tm[1] || tm[0]; break; }
+    }
+    if (!pulTipi && /^(posta|damga|vergi|harç|anma|konulu|tematik|hatıra|resim|adi|resmi|derleme|emisyon|blok)/i.test(tableTypeRow)) {
+      pulTipi = tableTypeRow;
+    }
+  }
+  // 2) Title: definitive/definitif keywords (high confidence)
+  if (!pulTipi && title) {
+    const titleLower = title.toLowerCase();
+    if (/\bdefinitive\b|\bdefinitif\b|\badi\s+pul/i.test(titleLower)) {
+      pulTipi = 'Posta Pulu';
+    }
+  }
+  // 3) "****" pattern indicates Damga Pulu
+  if (!pulTipi && allText.match(/\*{4,}/)) {
+    pulTipi = 'Damga Pulu';
+  }
+  // 4) Specific type patterns on body text ("posta pulu", "damga pulu", "fiscal", ...) — outrank bare keyword
+  if (!pulTipi) {
+    for (const pat of stampTypePatterns.slice(0, 3)) {
       const tm = scanText.match(pat);
       if (tm) { pulTipi = tm[1] || tm[0]; break; }
     }
   }
+  // 5) Specific type patterns on subtitle
   if (!pulTipi && subtitle) {
-    for (const pat of stampTypePatterns) {
+    for (const pat of stampTypePatterns.slice(0, 3)) {
       const tm = subtitle.toLowerCase().match(pat);
       if (tm) { pulTipi = tm[1] || tm[0]; break; }
     }
   }
+  // 6) Bare "damga" keyword — weaker signal; skip condition/printing contexts
+  //    (damga izi, damga kalıntısı, damga matbaası, damga yoğunluğu, damga mevcuttur)
+  if (!pulTipi && /\b(fiscal\s+)?damga\b(?!\s*(?:[iİ]z|kalıntı|matbaa|yoğunl|mevcut))/i.test(allText)) {
+    pulTipi = 'Damga Pulu';
+  }
+  // 7) Generic "pul" fallback
   if (!pulTipi) {
-    const tableTip = findKey('pul tipi', 'tip', 'type', 'tür', 'tur', 'kategori', 'category', 'seri', 'konu', 'nominal değer', 'nominal');
+    const tm = scanText.match(stampTypePatterns[3]);
+    if (tm) pulTipi = tm[1] || tm[0];
+  }
+  if (!pulTipi && subtitle) {
+    const tm = subtitle.toLowerCase().match(stampTypePatterns[3]);
+    if (tm) pulTipi = tm[1] || tm[0];
+  }
+  // 8) Fallback: broader table scan (seri/konu/nominal etc.)
+  if (!pulTipi) {
+    const tableTip = findKey('seri', 'konu', 'nominal değer', 'nominal');
     if (tableTip) {
       for (const pat of stampTypePatterns) {
         const tm = tableTip.toLowerCase().match(pat);
@@ -1543,9 +1569,10 @@ async function rebuildSection(section, existingData, incremental = false) {
     return existingData[section] || [];
   }
 
-  // 2. Build map of existing entries by name for incremental mode
+  // 2. Build map of existing entries by name (skip logic stays incremental-only;
+  //    map is always needed so a failed download keeps the prior entry)
   const existingMap = {};
-  if (incremental && existingData[section]) {
+  if (existingData[section]) {
     for (const entry of existingData[section]) {
       existingMap[entry.name] = entry;
     }
@@ -1586,16 +1613,20 @@ async function rebuildSection(section, existingData, incremental = false) {
     } catch (err) {
       errorCount++;
       console.log(` ERROR: ${err.message}`);
-      // Still add a minimal entry so the file isn't lost
-      entries.push({
-        id: file.id,
-        name: file.name,
-        mimeType: 'text/html',
-        _title: file.name.replace('.html', ''),
-        _code: file.name.replace('.html', '').toUpperCase(),
-        webViewLink: `https://drive.google.com/file/d/${file.id}/view?usp=drivesdk`,
-        modifiedTime: file.modifiedTime || new Date().toISOString(),
-      });
+      // Keep the prior entry on failure instead of a stripped-down placeholder
+      if (existingMap[file.name]) {
+        entries.push(existingMap[file.name]);
+      } else {
+        entries.push({
+          id: file.id,
+          name: file.name,
+          mimeType: 'text/html',
+          _title: file.name.replace('.html', ''),
+          _code: file.name.replace('.html', '').toUpperCase(),
+          webViewLink: `https://drive.google.com/file/d/${file.id}/view?usp=drivesdk`,
+          modifiedTime: file.modifiedTime || new Date().toISOString(),
+        });
+      }
     }
 
     // Rate limit

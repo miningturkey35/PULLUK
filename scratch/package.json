@@ -1,0 +1,15 @@
+{
+  "name": "scratch",
+  "version": "1.0.0",
+  "description": "",
+  "main": "checkdeploy.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "dependencies": {
+    "acorn": "^8.18.0",
+    "jsdom": "^30.1.1"
+  }
+}
