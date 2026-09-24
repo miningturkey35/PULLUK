@@ -2589,12 +2589,12 @@ async function processPreviewQueue() {
           // Plak-specific fallback: update card fields by querying DOM directly
           if (galleryId === 'plak' && card) {
             const plakFallbackValues = [
-              file._album || fallbackTitle,
+              fileNameNoExt,
               file._artist || '',
-              file._plakSirketi || '',
+              file._album || fallbackTitle,
               file._year || '',
-              file._format || '',
-              fileNameNoExt
+              [file._plakSirketi, file._country || file._ulke].filter(Boolean).join(' / '),
+              file._format || ''
             ];
             const plakFieldEls = card.querySelectorAll('.pdf-card-info .pdf-card-field');
             plakFieldEls.forEach((fieldEl, i) => {
@@ -2847,12 +2847,12 @@ function updateCardUI(item) {
      }
 
        const plakValues = [
-        file._album || file._title || fileNameNoExt,
+        fileNameNoExt,
         file._artist || file._subtitle || '—',
-        file._plakSirketi || '—',
+        file._album || file._title || fileNameNoExt,
         file._year || file._basimYili || '—',
-        file._format || '—',
-        fileNameNoExt
+        [file._plakSirketi, file._country || file._ulke].filter(Boolean).join(' / ') || '—',
+        file._format || '—'
       ];
 
       const plakFieldEls = card.querySelectorAll('.pdf-card-info .pdf-card-field');
@@ -3514,6 +3514,7 @@ class GalleryManager {
     if (!albumName) albumName = initialTitle;
 
     const fileNameNoExt = file.name.replace(/\.(html|htm|pdf)$/i, '');
+    const sirketUlke = [plakSirketi, country].filter(Boolean).join(' / ') || '—';
 
     const card = document.createElement('div');
     card.className = 'pdf-card plak-card reveal';
@@ -3540,28 +3541,28 @@ class GalleryManager {
       <div class="pdf-card-main">
         <div class="pdf-card-info">
           <div class="pdf-card-field">
-            <span class="pdf-card-field__label">Albüm</span>
-            <span class="pdf-card-field__value pdf-card-title-value">${albumName || initialTitle || '—'}</span>
+            <span class="pdf-card-field__label">KOLEKSİYON NO</span>
+            <span class="pdf-card-field__value">${fileNameNoExt || '—'}</span>
           </div>
           <div class="pdf-card-field plak-field-artist">
-            <span class="pdf-card-field__label">Sanatçı</span>
+            <span class="pdf-card-field__label">SANATÇI / GRUP</span>
             <span class="pdf-card-field__value">${artist || '—'}</span>
           </div>
           <div class="pdf-card-field">
-            <span class="pdf-card-field__label">Şirket</span>
-            <span class="pdf-card-field__value">${plakSirketi || '—'}</span>
+            <span class="pdf-card-field__label">ALBÜM</span>
+            <span class="pdf-card-field__value pdf-card-title-value">${albumName || initialTitle || '—'}</span>
           </div>
           <div class="pdf-card-field">
-            <span class="pdf-card-field__label">Yıl</span>
+            <span class="pdf-card-field__label">YIL</span>
             <span class="pdf-card-field__value">${year || '—'}</span>
           </div>
-          <div class="pdf-card-field plak-field-format">
-            <span class="pdf-card-field__label">Format</span>
-            <span class="pdf-card-field__value">${formatInfo || '—'}</span>
-          </div>
           <div class="pdf-card-field">
-            <span class="pdf-card-field__label">Koleksiyon</span>
-            <span class="pdf-card-field__value">${fileNameNoExt || '—'}</span>
+            <span class="pdf-card-field__label">ŞİRKET / ÜLKE</span>
+            <span class="pdf-card-field__value">${sirketUlke}</span>
+          </div>
+          <div class="pdf-card-field plak-field-format">
+            <span class="pdf-card-field__label">FORMAT</span>
+            <span class="pdf-card-field__value">${formatInfo || '—'}</span>
           </div>
         </div>
       </div>
