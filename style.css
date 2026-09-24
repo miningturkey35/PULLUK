@@ -984,32 +984,80 @@ html[data-theme="dark"] footer {
 }
 
 /* ─── Plak (Vinyl) Card ─── */
+/* Large vertical cards, same layout/scale as .diecast-card — plak content & labels unchanged */
+#pdfGrid_plak {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
 .plak-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
 }
 .plak-card:hover {
+  transform: translateY(-4px);
 }
 html[data-theme="dark"] .plak-card {
 }
 html[data-theme="dark"] .plak-card:hover {
 }
 
+.plak-card .pdf-card-thumb {
+  overflow: hidden;
+}
+
 .plak-icon-frame {
-  width: 90px;
-  height: 90px;
-  border-radius: 10px;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1/1;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
   background: linear-gradient(135deg, var(--gold-light), var(--coral-light));
   flex: none;
   overflow: hidden;
 }
+.plak-card:hover .pdf-icon-frame {
+  transform: none;
+}
+.plak-card:hover .pdf-icon-img {
+  transform: scale(1.05);
+}
+.plak-card .pdf-icon-fallback {
+  font-size: 3rem;
+}
 
-/* Plak card uses base pdf-card-info grid (2-col, 8px gap) — no overrides */
+.plak-card .pdf-card-main {
+  padding: 14px 16px;
+  gap: 8px;
+}
+.plak-card .pdf-card-action {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+}
+
+/* Plak fields: same 2-col grid + separator sizing as .diecast-card__fields */
+.plak-card .pdf-card-info {
+  margin: 0;
+  gap: 8px 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
 
 /* Plak card labels: consistent color, artist = gold */
 .plak-card .pdf-card-field__label {
   color: var(--ink-faint);
+  font-size: .58rem;
 }
 html[data-theme="dark"] .plak-card .pdf-card-field__label {
   color: rgba(255,255,255,.4);
+}
+.plak-card .pdf-card-field__value {
+  font-size: .80rem;
 }
 .plak-field-artist .pdf-card-field__label {
   color: var(--gold) !important;
@@ -1036,8 +1084,8 @@ html[data-theme="dark"] .plak-field-format .pdf-card-field__value {
 }
 
 @media (max-width: 560px) {
-  .plak-card { min-width: 0; flex-direction: column; align-items: flex-start; }
-  .plak-icon-frame { width: 100%; height: auto; aspect-ratio: 1/1; border-radius: 10px; }
+  .plak-card { min-width: 0; }
+  .plak-icon-frame { width: 100%; height: auto; aspect-ratio: 1/1; border-radius: 0; }
 }
 
 /* ─── Legoverse (LEGO) Card ─── */
