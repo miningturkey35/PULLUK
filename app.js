@@ -1324,8 +1324,62 @@ function extractStampInfoFromHtml(html) {
   // ── 13. ÜLKE (alias for country) ──
   ulke = country;
 
+  // ── 14. LOT BİLGİLERİ (lot bazlı çok pullu dosyalar) ──
+  // Sözleşme: .lot-no/.lot/.lot-no-badge element → "Lot No"/"Lot" tablo satırı → başlık metninde LOT\d+
+  let lotNo = '';
+  let pulSayisi = 0;
+  {
+    const lotSelectors = ['.lot-no', '.lot', '.lot-no-badge'];
+    for (const sel of lotSelectors) {
+      const el = doc.querySelector(sel);
+      if (el) {
+        const m = el.textContent.match(/\bLOT\s*\d+\b/i);
+        if (m) { lotNo = m[0].replace(/\s+/g, '').toUpperCase(); break; }
+      }
+    }
+    if (!lotNo) {
+      const tableLot = findTableValue('lot no', 'lot');
+      if (tableLot) {
+        const m = tableLot.match(/\bLOT\s*\d+\b/i);
+        if (m) lotNo = m[0].replace(/\s+/g, '').toUpperCase();
+      }
+    }
+    if (!lotNo) {
+      const titleTagLot = doc.querySelector('title');
+      const lotScanSrc = [title, subtitle, titleTagLot ? titleTagLot.textContent : ''].join(' ');
+      const lm = lotScanSrc.match(/\bLOT\s*\d+\b/i);
+      if (lm) lotNo = lm[0].replace(/\s+/g, '').toUpperCase();
+    }
+
+    const countSelectors = ['.pul-sayisi', '.pul-count', '.adet'];
+    for (const sel of countSelectors) {
+      const el = doc.querySelector(sel);
+      if (el) {
+        const n = parseInt(el.textContent.replace(/[^\d]/g, ''), 10);
+        if (n > 0) { pulSayisi = n; break; }
+      }
+    }
+    if (!pulSayisi) {
+      const tableCount = findTableValue('pul sayisi', 'pul sayısı', 'pul adedi', 'pul adet', 'adet', 'adet sayisi', 'adet sayısı', 'toplam adet');
+      if (tableCount) {
+        const n = parseInt(String(tableCount).replace(/[^\d]/g, ''), 10);
+        if (n > 0) pulSayisi = n;
+      }
+    }
+    if (!pulSayisi && lotNo) {
+      // Fallback: lot dosyasındaki pul görsellerini say (marka/logotype görselleri hariç)
+      const countImgsIn = sel => doc.querySelectorAll(`${sel} img`).length;
+      let imgCount = countImgsIn('.main-images') + countImgsIn('.extra-grid') + countImgsIn('.extra-section') + countImgsIn('.stamp-grid') + countImgsIn('.stamps');
+      if (!imgCount) {
+        const bodyImgs = Array.from(doc.querySelectorAll('body img'));
+        imgCount = bodyImgs.filter(img => !img.closest('header, footer, .brand')).length;
+      }
+      if (imgCount > 0) pulSayisi = imgCount;
+    }
+  }
+
   return {
-    title, subtitle, image, code, country, year, katalogNo, ulke, nominalDeger, pulTipi, basimYili, basimYeri, durum, ozet
+    title, subtitle, image, code, country, year, katalogNo, ulke, nominalDeger, pulTipi, basimYili, basimYeri, durum, ozet, lotNo, pulSayisi
   };
 }
 // ─── BASILSANAT (PRINTED WORKS) EXTRACTOR ────────────────────────────────────
@@ -2065,7 +2119,8 @@ async function getFileFromCache(file) {
         '_ozet', '_durum', '_artist', '_album', '_plakSirketi', '_format', '_genre',
         '_pressing', '_matrixNo', '_condition', '_brand', '_model', '_scale', '_origin',
         '_series', '_material', '_modelYear', '_productionYear', '_yazar', '_yayinevi',
-        '_dil', '_tur', '_marka', '_deste', '_kartSayisi', '_boyut', '_indeks'
+        '_dil', '_tur', '_marka', '_deste', '_kartSayisi', '_boyut', '_indeks',
+        '_lotNo', '_pulSayisi'
       ];
       for (const key of cacheFields) {
         if (cached[key] !== undefined && cached[key] !== null && cached[key] !== '') {
@@ -2129,7 +2184,9 @@ async function saveFileToCache(file) {
       _deste: file._deste,
       _kartSayisi: file._kartSayisi,
       _boyut: file._boyut,
-      _indeks: file._indeks
+      _indeks: file._indeks,
+      _lotNo: file._lotNo,
+      _pulSayisi: file._pulSayisi
     };
     store.put(data);
   } catch (e) {
@@ -2181,6 +2238,8 @@ async function processPreviewQueue() {
           if (!file._code && reExtracted.code) { file._code = reExtracted.code; changed = true; }
           if (!file._basimYili && reExtracted.basimYili) { file._basimYili = reExtracted.basimYili; changed = true; }
           if (!file._subtitle && reExtracted.subtitle) { file._subtitle = reExtracted.subtitle; changed = true; }
+          if (reExtracted.lotNo && file._lotNo !== reExtracted.lotNo) { file._lotNo = reExtracted.lotNo; changed = true; }
+          if (reExtracted.pulSayisi && file._pulSayisi !== reExtracted.pulSayisi) { file._pulSayisi = reExtracted.pulSayisi; changed = true; }
           if (changed) saveFileToCache(file);
         }
         // Plak-specific: always re-extract from html when available (refreshes label/etiket info)
@@ -2321,6 +2380,8 @@ async function processPreviewQueue() {
           if (!file._code && reExtracted.code) { file._code = reExtracted.code; changed = true; }
           if (!file._basimYili && reExtracted.basimYili) { file._basimYili = reExtracted.basimYili; changed = true; }
           if (!file._subtitle && reExtracted.subtitle) { file._subtitle = reExtracted.subtitle; changed = true; }
+          if (reExtracted.lotNo && file._lotNo !== reExtracted.lotNo) { file._lotNo = reExtracted.lotNo; changed = true; }
+          if (reExtracted.pulSayisi && file._pulSayisi !== reExtracted.pulSayisi) { file._pulSayisi = reExtracted.pulSayisi; changed = true; }
           if (changed) saveFileToCache(file);
         }
         // Also re-extract _title if still missing
@@ -2496,6 +2557,8 @@ async function processPreviewQueue() {
         file._nominalDeger = extracted.nominalDeger;
         file._ozet = extracted.ozet;
         file._durum = extracted.durum;
+        file._lotNo = extracted.lotNo || '';
+        file._pulSayisi = extracted.pulSayisi || 0;
         file._htmlContent = html;
 
         // Plak-specific extraction
@@ -2701,13 +2764,15 @@ function updateCardUI(item) {
     item.nominalEl = fresh.querySelector('.card-nominal-el');
     item.tipiEl = fresh.querySelector('.card-tipi-el');
     item.durumEl = fresh.querySelector('.card-durum-el');
+    item.lotNoEl = fresh.querySelector('.card-lot-no-el');
+    item.pulSayisiEl = fresh.querySelector('.card-pul-sayisi-el');
     item.brandEl = fresh.querySelector('.diecast-label__brand');
     item.badgeBrandEl = fresh.querySelector('.diecast-badge--brand');
     item.badgeYearEl = fresh.querySelector('.diecast-badge--year');
     item.badgeCodeEl = fresh.querySelector('.diecast-badge--code');
     item.h3El = fresh.querySelector('.diecast-card__model');
   }
-  const { file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, isDiecast, brandEl, yearEl, badgeBrandEl, badgeYearEl, badgeCodeEl, h3El, koleksiyonEl, ulkeEl, yilEl, nominalEl, tipiEl, durumEl, galleryId } = item;
+  const { file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, isDiecast, brandEl, yearEl, badgeBrandEl, badgeYearEl, badgeCodeEl, h3El, koleksiyonEl, ulkeEl, yilEl, nominalEl, tipiEl, durumEl, lotNoEl, pulSayisiEl, galleryId } = item;
   console.log(`[PULLUK] updateCardUI for ${file.name}:`, { _title: file._title, _code: file._code, _country: file._country, _year: file._year, _nominalDeger: file._nominalDeger, _pulTipi: file._pulTipi, _durum: file._durum, koleksiyonEl: !!koleksiyonEl, ulkeEl: !!ulkeEl });
 
   // Always normalize country for consistent display
@@ -2780,6 +2845,19 @@ function updateCardUI(item) {
     if (durumEl) {
       const valEl = durumEl.querySelector('.pdf-card-field__value');
       if (valEl) valEl.textContent = file._durum || '—';
+    }
+    // Lot alanları (Pulluk lot kartı)
+    if (lotNoEl) {
+      const valEl = lotNoEl.querySelector('.pdf-card-field__value');
+      if (valEl) valEl.textContent = file._lotNo || '—';
+    }
+    if (pulSayisiEl) {
+      const valEl = pulSayisiEl.querySelector('.pdf-card-field__value');
+      if (valEl) valEl.textContent = file._pulSayisi ? String(file._pulSayisi) : '—';
+    }
+    // Geç keşif: dosya lot ama kart tek pul düzeninde çizildiyse kartı lot düzenine al
+    if (galleryId === 'galeri' && file._lotNo && card && !card.classList.contains('lot-card') && item.gallery) {
+      item.gallery.renderGallery();
     }
     if (card && isBasilsanat) {
       const catVal = normalizeBasilsanatTur(file._tur || file.category);
@@ -3361,6 +3439,7 @@ class GalleryManager {
         (file._tur || '').toLowerCase().includes(q) ||
         (file._marka || '').toLowerCase().includes(q) ||
         (file._model || '').toLowerCase().includes(q) ||
+        (file._lotNo || '').toLowerCase().includes(q) ||
         file.name.toLowerCase().includes(q);
       const catMatch = cat === 'all' || (file.category || '').toLocaleLowerCase('tr') === cat;
       return nameMatch && catMatch;
@@ -3418,11 +3497,17 @@ class GalleryManager {
 
     const fileNameNoExt = file.name.replace(/\.(html|htm|pdf)$/i, '').toUpperCase();
     const displayKoleksiyonNo = (isBasilsanat ? (file._katalogNo || file._code) : null) || fileNameNoExt || '—';
+    // Lot bazlı dosya (içerikten extract edilen LOT01/LOT02…) — sadece Pulluk/galeri
+    const isLot = (galleryId === 'galeri' && Boolean(file._lotNo));
+    const lotNoValue = file._lotNo || '';
+    const pulSayisiValue = file._pulSayisi ? String(file._pulSayisi) : '';
+    if (isLot) card.className = 'pdf-card lot-card reveal';
     card.innerHTML = `
       <div class="pdf-card-thumb">
         <div class="pdf-icon-frame ${bgClass}">
           <img class="pdf-icon-img card-img-el" src="${hasImage ? file._image : ''}" alt="${initialTitle}" ${hasImage ? '' : 'style="display:none;"'} />
           <span class="pdf-icon-fallback card-fallback-el" ${hasImage ? 'style="display:none;"' : ''} aria-hidden="true">${icon}</span>
+          ${isLot ? `<span class="lot-badge">${lotNoValue}</span>` : ''}
         </div>
       </div>
       <div class="pdf-card-main">
@@ -3431,6 +3516,15 @@ class GalleryManager {
             <span class="pdf-card-field__label">Koleksiyon No</span>
             <span class="pdf-card-field__value">${displayKoleksiyonNo}</span>
           </div>
+          ${isLot ? `
+          <div class="pdf-card-field card-lot-no-el">
+            <span class="pdf-card-field__label">Lot No</span>
+            <span class="pdf-card-field__value">${lotNoValue || '—'}</span>
+          </div>
+          <div class="pdf-card-field card-pul-sayisi-el lot-count-field">
+            <span class="pdf-card-field__label">Pul Sayısı</span>
+            <span class="pdf-card-field__value">${pulSayisiValue || '—'}</span>
+          </div>` : ''}
           <div class="pdf-card-field card-ulke-el">
             <span class="pdf-card-field__label">${L.ulke}</span>
             <span class="pdf-card-field__value">${abbrevCountry || '—'}</span>
@@ -3471,13 +3565,15 @@ class GalleryManager {
     const nominalEl = card.querySelector('.card-nominal-el');
     const tipiEl = card.querySelector('.card-tipi-el');
     const durumEl = card.querySelector('.card-durum-el');
+    const lotNoEl = card.querySelector('.card-lot-no-el');
+    const pulSayisiEl = card.querySelector('.card-pul-sayisi-el');
 
     const isAllother = (galleryId === 'allother');
     const needsExtraction = file._needsRefresh || !file._htmlContent || (isBasilsanat ? (!file._title || !file._image || !file._tur || !file._yazar) : isAllother ? (!file._title || !file._image) : (!file._title || !file._image));
     if (!file.isMock && needsExtraction && (file.mimeType === 'text/html' || file.name.endsWith('.html'))) {
       if (CONFIG.GOOGLE_API_KEY.trim() && !previewQueue.some(q => q.file === file)) {
         console.log(`[PULLUK] createPdfCard: pushing ${file.name} to previewQueue`);
-        previewQueue.push({ file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, gallery: this, koleksiyonEl, ulkeEl, yilEl, nominalEl, tipiEl, durumEl, galleryId });
+        previewQueue.push({ file, titleEl, subEl, imgEl, fallbackEl, codeEl, card, gallery: this, koleksiyonEl, ulkeEl, yilEl, nominalEl, tipiEl, durumEl, lotNoEl, pulSayisiEl, galleryId });
         processPreviewQueue();
       }
     }
@@ -3969,7 +4065,8 @@ async function openViewer(title, fileId, viewUrl, mimeType, galleryInst) {
 
   titleEl.textContent = displayTitle;
   const codeVal = (cachedFile && (cachedFile._code || cachedFile._katalogNo)) || '';
-  collectionEl.textContent = codeVal;
+  const lotSuffix = (cachedFile && cachedFile._lotNo) ? ` · ${cachedFile._lotNo}` : '';
+  collectionEl.textContent = codeVal + lotSuffix;
   collectionEl.style.display = codeVal ? 'inline-block' : 'none';
   loading.classList.remove('is-hidden');
   frame.src = '';

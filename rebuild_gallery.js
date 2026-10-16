@@ -397,7 +397,7 @@ function normalizeTableKey(str) {
 // ─── STAMP (GALERI) METADATA EXTRACTION ─────────────────────────────────────
 
 function extractStampInfoFromHtml(html) {
-  const EMPTY = { title: '', subtitle: '', image: '', code: '', country: '', year: '', katalogNo: '', ulke: '', basimYili: '', basimYeri: '', nominalDeger: '', pulTipi: '', ozet: '', durum: '' };
+  const EMPTY = { title: '', subtitle: '', image: '', code: '', country: '', year: '', katalogNo: '', ulke: '', basimYili: '', basimYeri: '', nominalDeger: '', pulTipi: '', ozet: '', durum: '', lotNo: '', pulSayisi: 0 };
   if (!html) return EMPTY;
 
   const cleanHtml = html
@@ -724,9 +724,57 @@ function extractStampInfoFromHtml(html) {
     else if (isDamgasiz) durum = 'Damgasız';
   }
 
+  // ── LOT BİLGİLERİ (lot bazlı çok pullu dosyalar) ──
+  // Sözleşme: .lot-no/.lot/.lot-no-badge element → "Lot No"/"Lot" tablo satırı → başlık metninde LOT\d+
+  let lotNo = '';
+  let pulSayisi = 0;
+  {
+    const lotElMatch = cleanHtml.match(/<div\s+class="(?:[^"]*\s)?(?:lot-no|lot|lot-no-badge)(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/div>/i);
+    if (lotElMatch) {
+      const m = lotElMatch[1].replace(/<[^>]+>/g, '').match(/\bLOT\s*\d+\b/i);
+      if (m) lotNo = m[0].replace(/\s+/g, '').toUpperCase();
+    }
+    if (!lotNo) {
+      const tableLot = findKey('lot no', 'lot');
+      if (tableLot) {
+        const m = String(tableLot).match(/\bLOT\s*\d+\b/i);
+        if (m) lotNo = m[0].replace(/\s+/g, '').toUpperCase();
+      }
+    }
+    if (!lotNo) {
+      const titleTagLot = cleanHtml.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      const lotScanSrc = [title, subtitle, titleTagLot ? titleTagLot[1].replace(/<[^>]+>/g, '') : ''].join(' ');
+      const lm = lotScanSrc.match(/\bLOT\s*\d+\b/i);
+      if (lm) lotNo = lm[0].replace(/\s+/g, '').toUpperCase();
+    }
+
+    const countElMatch = cleanHtml.match(/<div\s+class="(?:[^"]*\s)?(?:pul-sayisi|pul-count|adet)(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/div>/i);
+    if (countElMatch) {
+      const n = parseInt(countElMatch[1].replace(/[^\d]/g, ''), 10);
+      if (n > 0) pulSayisi = n;
+    }
+    if (!pulSayisi) {
+      const tableCount = findKey('pul sayisi', 'pul sayısı', 'pul adedi', 'pul adet', 'adet', 'adet sayisi', 'adet sayısı', 'toplam adet');
+      if (tableCount) {
+        const n = parseInt(String(tableCount).replace(/[^\d]/g, ''), 10);
+        if (n > 0) pulSayisi = n;
+      }
+    }
+    if (!pulSayisi && lotNo) {
+      // Fallback: lot dosyasındaki pul görsellerini say (header/footer/marka görselleri hariç)
+      const withoutHf = cleanHtml
+        .replace(/<header[\s\S]*?<\/header>/gi, '')
+        .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+        .replace(/<div\s+class="[^"]*brand[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
+      const imgCount = (withoutHf.match(/<img\b/gi) || []).length;
+      if (imgCount > 0) pulSayisi = imgCount;
+    }
+  }
+
   return {
     title, subtitle, image, code, country, year, katalogNo: code,
     ulke: country, nominalDeger, pulTipi, basimYili, basimYeri, durum, ozet,
+    lotNo, pulSayisi,
   };
 }
 
@@ -1359,6 +1407,8 @@ function buildGaleriEntry(file, meta) {
     _pulTipi: meta.pulTipi || 'Posta Pulu',
     _durum: meta.durum || '',
     _katalogNo: code,
+    _lotNo: meta.lotNo || '',
+    _pulSayisi: meta.pulSayisi || 0,
     webViewLink: viewLink,
     modifiedTime: file.modifiedTime || new Date().toISOString(),
   };
