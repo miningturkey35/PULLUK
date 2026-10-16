@@ -115,6 +115,55 @@ const imgFallbackLot = `<!DOCTYPE html><html><head><title>MG0115 Lot</title></he
 
 const singleStamp = fs.readFileSync(path.join(root, 'files', 'MG0001.html'), 'utf8');
 
+// Gerçek lot dosyaları (Drive'dan indirildi, base64 kısaltıldı)
+const realLot = name => fs.readFileSync(path.join(__dirname, 'lot_fixtures', name), 'utf8');
+
+// MG0005-8 şablonu: div.lot-contents > plain <ul> + "Toplam: N adet pul"
+const lotContentsListAndTotal = `<!DOCTYPE html><html><head><title>MG0099 · LOT09</title></head><body>
+<div class="card">
+  <header><h1>MG0099 · LOT09</h1><div class="lot-badge">LOT09 — Test Lotu</div></header>
+  <div class="lot-contents">
+    <p>Lot içeriği (adetler kesin):</p>
+    <ul>
+      <li>10 Para — 1 adet</li>
+      <li>5 Kuruş — 4 adet</li>
+      <li>25 Kuruş — 2 adet</li>
+    </ul>
+    <p>Toplam: 7 adet pul</p>
+  </div>
+</div>
+</body></html>`;
+
+// Sadece liste var, "Toplam:" metni yok → liste toplamı
+const lotListOnly = `<!DOCTYPE html><html><head><title>MG0098 · LOT08</title></head><body>
+<div class="card">
+  <header><h1>MG0098 · LOT08</h1><div class="lot-badge">LOT08</div></header>
+  <div class="lot-contents">
+    <ul>
+      <li>1 Kuruş — 2 adet</li>
+      <li>2 Kuruş — 3 adet</li>
+      <li>3 Kuruş — 1 adet</li>
+    </ul>
+  </div>
+</div>
+</body></html>`;
+
+// MG0004 şablonu: "Lot Kodu" tablo satırı + "Toplam Adet" satırı + ul.lot-list
+const lotKoduToplamAdet = `<!DOCTYPE html><html><head><title>MG0097 · LOT07</title></head><body>
+<div class="card">
+  <header><h1>Damga Pul Lotu</h1></header>
+  <table>
+    <tr><th>Koleksiyon No</th><td>MG0097</td></tr>
+    <tr><th>Lot Kodu</th><td>LOT07</td></tr>
+    <tr><th>Toplam Adet</th><td>9 adet</td></tr>
+  </table>
+  <ul class="lot-list">
+    <li><strong>1 Kuruş</strong> — 4 adet</li>
+    <li><strong>2 Kuruş</strong> — 5 adet</li>
+  </ul>
+</div>
+</body></html>`;
+
 // [label, html, expectedLotNo, expectedPulSayisi]
 const cases = [
   ['.lot-no element + "Pul Sayısı" tablo satırı', lotElementAndTableRow, 'LOT01', 20],
@@ -122,6 +171,14 @@ const cases = [
   ['başlıkta LOT03 + .lot element + .pul-sayisi', titleLotWithCountElement, 'LOT03', 7],
   ['.lot-no-badge + görsel sayım fallback', imgFallbackLot, 'LOT04', 3],
   ['tek pul regresyonu (MG0001: lot yok)', singleStamp, '', 0],
+  ['div.lot-contents liste + "Toplam: 7 adet pul"', lotContentsListAndTotal, 'LOT09', 7],
+  ['sadece div.lot-contents listesi (Toplam metni yok)', lotListOnly, 'LOT08', 6],
+  ['"Lot Kodu" + "Toplam Adet" tablo + ul.lot-list', lotKoduToplamAdet, 'LOT07', 9],
+  ['gerçek MG0004 (LOT01: Toplam Adet tablo satırı)', realLot('MG0004.html'), 'LOT01', 11],
+  ['gerçek MG0005 (LOT02: lot-contents + Toplam: 38)', realLot('MG0005.html'), 'LOT02', 38],
+  ['gerçek MG0006 (LOT03: lot-contents + Toplam: 37)', realLot('MG0006.html'), 'LOT03', 37],
+  ['gerçek MG0007 (LOT04: Toplam: 7 adet pul)', realLot('MG0007.html'), 'LOT04', 7],
+  ['gerçek MG0008 (LOT05: Toplam: 5 adet pul)', realLot('MG0008.html'), 'LOT05', 5],
 ];
 
 let pass = 0, fail = 0;

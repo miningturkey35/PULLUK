@@ -1329,7 +1329,7 @@ function extractStampInfoFromHtml(html) {
   let lotNo = '';
   let pulSayisi = 0;
   {
-    const lotSelectors = ['.lot-no', '.lot', '.lot-no-badge'];
+    const lotSelectors = ['.lot-no', '.lot-badge', '.lot', '.lot-no-badge'];
     for (const sel of lotSelectors) {
       const el = doc.querySelector(sel);
       if (el) {
@@ -1365,6 +1365,24 @@ function extractStampInfoFromHtml(html) {
         const n = parseInt(String(tableCount).replace(/[^\d]/g, ''), 10);
         if (n > 0) pulSayisi = n;
       }
+    }
+    if (!pulSayisi && lotNo) {
+      // Serbest metin toplam: "Toplam: 7 adet pul" (iki nokta zorunlu — "Toplam Değer 250 TL" gibi yanlış eşleşmeleri engeller)
+      const totalMatch = scanText.match(/toplam\s*[:：]\s*(\d+)\s*adet/i);
+      if (totalMatch) {
+        const n = parseInt(totalMatch[1], 10);
+        if (n > 0) pulSayisi = n;
+      }
+    }
+    if (!pulSayisi && lotNo) {
+      // Lot içerik listesi adet toplamı: <li>3 Kuruş — 3 adet</li> … (.lot-contents / .lot-list)
+      const lotLis = doc.querySelectorAll('.lot-contents li, .lot-list li');
+      let sum = 0;
+      lotLis.forEach(li => {
+        const m = li.textContent.match(/(\d+)\s*adet/i);
+        if (m) sum += parseInt(m[1], 10);
+      });
+      if (sum > 0) pulSayisi = sum;
     }
     if (!pulSayisi && lotNo) {
       // Fallback: lot dosyasındaki pul görsellerini say (marka/logotype görselleri hariç)
@@ -2070,7 +2088,7 @@ function extractLegoverseInfoFromHtml(html) {
 }
 
 const DB_NAME = 'PullukDB';
-const DB_VERSION = 16; // v16: clear cache after pulTipi table-first extraction fix
+const DB_VERSION = 17; // v17: clear cache after lot pulSayisi extraction fix (Toplam:/lot-list sum)
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const STORE_NAME = 'fileCache';
 

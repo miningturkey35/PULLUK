@@ -729,7 +729,7 @@ function extractStampInfoFromHtml(html) {
   let lotNo = '';
   let pulSayisi = 0;
   {
-    const lotElMatch = cleanHtml.match(/<div\s+class="(?:[^"]*\s)?(?:lot-no|lot|lot-no-badge)(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/div>/i);
+    const lotElMatch = cleanHtml.match(/<div\s+class="(?:[^"]*\s)?(?:lot-no|lot-badge|lot-no-badge|lot)(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/div>/i);
     if (lotElMatch) {
       const m = lotElMatch[1].replace(/<[^>]+>/g, '').match(/\bLOT\s*\d+\b/i);
       if (m) lotNo = m[0].replace(/\s+/g, '').toUpperCase();
@@ -759,6 +759,33 @@ function extractStampInfoFromHtml(html) {
         const n = parseInt(String(tableCount).replace(/[^\d]/g, ''), 10);
         if (n > 0) pulSayisi = n;
       }
+    }
+    if (!pulSayisi && lotNo) {
+      // Serbest metin toplam: "Toplam: 7 adet pul" (iki nokta zorunlu)
+      const totalMatch = scanText.match(/toplam\s*[:：]\s*(\d+)\s*adet/i);
+      if (totalMatch) {
+        const n = parseInt(totalMatch[1], 10);
+        if (n > 0) pulSayisi = n;
+      }
+    }
+    if (!pulSayisi && lotNo) {
+      // Lot içerik listesi adet toplamı: ul.lot-list / ul.lot-contents / div.lot-contents içindeki ul
+      let listHtml = '';
+      const ulClassRe = /<ul[^>]*class="[^"]*(?:lot-contents|lot-list)[^"]*"[^>]*>([\s\S]*?)<\/ul>/gi;
+      let um;
+      while ((um = ulClassRe.exec(cleanHtml)) !== null) listHtml += um[1] + '\n';
+      const divRe = /<div[^>]*class="[^"]*lot-contents[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+      while ((um = divRe.exec(cleanHtml)) !== null) {
+        const innerUl = um[1].match(/<ul[^>]*>([\s\S]*?)<\/ul>/i);
+        if (innerUl) listHtml += innerUl[1] + '\n';
+      }
+      let sum = 0;
+      const lis = listHtml.match(/<li[^>]*>[\s\S]*?<\/li>/gi) || [];
+      for (const li of lis) {
+        const m = li.replace(/<[^>]+>/g, ' ').match(/(\d+)\s*adet/i);
+        if (m) sum += parseInt(m[1], 10);
+      }
+      if (sum > 0) pulSayisi = sum;
     }
     if (!pulSayisi && lotNo) {
       // Fallback: lot dosyasındaki pul görsellerini say (header/footer/marka görselleri hariç)
